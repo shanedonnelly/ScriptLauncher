@@ -1,9 +1,10 @@
 import os
 import sys
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox
 import subprocess
 from PIL import Image, ImageTk  # Ensure Pillow is installed: pip install Pillow
+from ttkbootstrap import Style  # Ensure ttkbootstrap is installed: pip install ttkbootstrap
 
 PRESETS_FOLDER = "presets"
 ASSETS_FOLDER = os.path.join("assets", "app_icons")
@@ -12,6 +13,16 @@ MAX_COLUMNS = 6  # Updated to 6 columns
 class ScriptLauncherApp:
     def __init__(self, root):
         print("Debug: Initializing ScriptLauncherApp...")
+        
+        # Initialize ttkbootstrap style
+        # Available themes: 'superhero', 'flatly', 'darkly', 'cosmo', 'journal', 'litera',
+        # 'minty', 'pulse', 'sandstone', 'simplex', 'yeti', 'materia', etc.
+        self.style = Style(theme="pulse")
+        # self.style = Style(theme="sandstone")
+        # self.style = Style(theme="simplex")
+        # self.style = Style(theme="yeti")
+
+
         self.root = root
         self.root.title("ScriptLauncher")
         self.root.configure(highlightthickness=0)
@@ -34,6 +45,7 @@ class ScriptLauncherApp:
         self.button_width = 20
         self.button_height = 5
 
+        # Canvas and scrollbar for presets
         self.canvas = tk.Canvas(root, borderwidth=0, background="#ffffff")
         self.scrollbar = tk.Scrollbar(root, orient="vertical", command=self.canvas.yview)
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
@@ -49,10 +61,14 @@ class ScriptLauncherApp:
             text="➕",
             width=self.button_width,
             height=self.button_height,
-            command=self.open_add_dialog
+            command=self.open_add_dialog,
+            bg=self.style.colors.primary,
+            fg="white",
+            relief=tk.RAISED
         )
 
         self.icon_images = {}
+        self.preset_widgets = {}  # Mapping for preset widgets
         self.load_icon_images()
 
         self.load_existing_presets()
@@ -87,7 +103,7 @@ class ScriptLauncherApp:
     def add_preset_button(self, title, file_name, icon='none'):
         self.plus_btn.grid_forget()
         print(f"Debug: Adding preset button '{title}' at position {self.next_position}...")
-        frame = tk.Frame(self.presets_frame)
+        frame = tk.Frame(self.presets_frame, bd=2, relief=tk.RIDGE)
         row = self.next_position // MAX_COLUMNS
         col = self.next_position % MAX_COLUMNS
         frame.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
@@ -106,20 +122,21 @@ class ScriptLauncherApp:
             width=self.button_width,
             height=self.button_height,
             font=("TkDefaultFont", 12),
-            bg="#f0f0f0",
-            fg="#000000",
+            bg=self.style.colors.primary,
+            fg="white",
             relief=tk.RAISED,
             command=lambda f=file_name: self.run_preset(f)
         )
         btn.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # If icon is provided, place top-left
+        icon_label = None
         if icon != 'none' and icon in self.icon_images:
-            icon_label = tk.Label(button_frame, image=self.icon_images[icon], bg="#f0f0f0")
+            icon_label = tk.Label(button_frame, image=self.icon_images[icon], bg=self.style.colors.primary)
             icon_label.place(x=5, y=5)
 
         # Edit/Delete stacked to the right
-        buttons_right_frame = tk.Frame(button_frame, bg="#f0f0f0")
+        buttons_right_frame = tk.Frame(button_frame, bg=self.style.colors.primary)
         buttons_right_frame.pack(side=tk.RIGHT, padx=2, pady=2)
 
         edit_btn = tk.Button(
@@ -127,7 +144,10 @@ class ScriptLauncherApp:
             text="✎",
             width=3,
             height=1,
-            command=lambda f=file_name, t=title: self.edit_preset(f, t)
+            command=lambda f=file_name, t=title: self.edit_preset(f, t),
+            bg=self.style.colors.secondary,
+            fg="white",
+            relief=tk.RAISED
         )
         edit_btn.pack(side=tk.TOP, padx=2, pady=2)
 
@@ -136,9 +156,19 @@ class ScriptLauncherApp:
             text="🗑",
             width=3,
             height=1,
-            command=lambda f=file_name: self.delete_preset(f, frame)
+            command=lambda f=file_name: self.delete_preset(f, frame),
+            bg=self.style.colors.danger,
+            fg="white",
+            relief=tk.RAISED
         )
         del_btn.pack(side=tk.TOP, padx=2, pady=2)
+
+        # Store the button reference
+        self.preset_widgets[file_name] = {
+            'frame': frame,
+            'button': btn,
+            'icon_label': icon_label
+        }
 
         self.next_position += 1
         self.update_plus_position()
@@ -149,7 +179,7 @@ class ScriptLauncherApp:
         if os.path.exists(preset_path):
             os.remove(preset_path)
         frame.destroy()
-        self.reload_presets()
+        self.rearrange_presets()
 
     def load_existing_presets(self):
         print("Debug: Loading existing presets...")
@@ -196,7 +226,7 @@ class ScriptLauncherApp:
         print("Debug: Rebuilding icon gallery from scratch...")
         gallery_popup = tk.Toplevel(parent_dialog)
         gallery_popup.title("Select Icon")
-        gallery_popup.geometry("250x250")
+        gallery_popup.geometry("289x280")
         gallery_popup.transient(parent_dialog)
         gallery_popup.configure(highlightthickness=0)
 
@@ -226,9 +256,9 @@ class ScriptLauncherApp:
             width=1,
             height=1,
             command=lambda: select_icon("none"),
-            bg="#ffffff",
-            borderwidth=1,
-            relief=tk.RIDGE
+            bg=self.style.colors.secondary,
+            fg="white",
+            relief=tk.RAISED
         )
         none_btn.grid(row=0, column=0, padx=5, pady=5)
 
@@ -254,22 +284,25 @@ class ScriptLauncherApp:
         print("Debug: Creating preset dialog...")
         dialog = tk.Toplevel(self.root)
         dialog.title("Edit Preset" if file_name else "Add Preset")
-        dialog.geometry("800x700")
+        dialog.geometry("900x800")
         dialog.transient(self.root)
         dialog.configure(highlightthickness=0)
 
-        title_label = tk.Label(dialog, text="Title:")
-        title_label.pack(pady=5)
-        title_entry = tk.Entry(dialog, width=80)
-        title_entry.insert(0, title)
-        title_entry.pack(pady=5)
+        dialog_frame = tk.Frame(dialog, padx=10, pady=10)
+        dialog_frame.pack(fill=tk.BOTH, expand=True)
 
-        type_label = tk.Label(dialog, text="Type:")
-        type_label.pack(pady=5)
+        title_label = tk.Label(dialog_frame, text="Title:")
+        title_label.pack(pady=5, anchor='w')
+        title_entry = tk.Entry(dialog_frame, width=80)
+        title_entry.insert(0, title)
+        title_entry.pack(pady=5, fill=tk.X)
+
+        type_label = tk.Label(dialog_frame, text="Type:")
+        type_label.pack(pady=5, anchor='w')
         type_var = tk.StringVar(value=preset_type)
 
-        type_frame = tk.Frame(dialog)
-        type_frame.pack(pady=5)
+        type_frame = tk.Frame(dialog_frame)
+        type_frame.pack(pady=5, anchor='w')
 
         def select_type(selected_type):
             type_var.set(selected_type)
@@ -286,11 +319,11 @@ class ScriptLauncherApp:
 
         select_type(preset_type)
 
-        icon_label = tk.Label(dialog, text="Icon:")
-        icon_label.pack(pady=5)
+        icon_label = tk.Label(dialog_frame, text="Icon:")
+        icon_label.pack(pady=5, anchor='w')
 
-        icon_frame = tk.Frame(dialog)
-        icon_frame.pack(pady=5)
+        icon_frame = tk.Frame(dialog_frame)
+        icon_frame.pack(pady=5, anchor='w')
 
         icon_var = tk.StringVar(value=icon)
         selected_icon_label = tk.Label(icon_frame, text=(icon if icon != "none" else ""))
@@ -300,10 +333,10 @@ class ScriptLauncherApp:
                                    command=lambda: self.open_icon_gallery(dialog, icon_var, selected_icon_label))
         icon_popup_btn.pack(side=tk.LEFT, padx=5)
 
-        content_label = tk.Label(dialog, text="Script Content:")
-        content_label.pack(pady=5)
-        content_text = tk.Text(dialog, width=80, height=20)
-        content_text.pack(pady=5)
+        content_label = tk.Label(dialog_frame, text="Script Content:")
+        content_label.pack(pady=5, anchor='w')
+        content_text = tk.Text(dialog_frame, width=80, height=20)
+        content_text.pack(pady=5, fill=tk.BOTH, expand=True)
         content_text.insert("1.0", content)
 
         def on_save():
@@ -317,15 +350,28 @@ class ScriptLauncherApp:
                 return
             if file_name:
                 self.save_preset(file_name, new_title, new_type, script_content, new_icon)
+                # Update the specific button
+                widget = self.preset_widgets.get(file_name)
+                if widget:
+                    widget['button'].config(text=new_title)
+                    # Update icon
+                    if new_icon != "none" and new_icon in self.icon_images:
+                        widget['icon_label'].config(image=self.icon_images[new_icon])
+                        widget['icon_label'].image = self.icon_images[new_icon]  # Prevent GC
+                    else:
+                        if widget['icon_label']:
+                            widget['icon_label'].destroy()
+                            widget['icon_label'] = None
+                dialog.destroy()
             else:
                 existing = [f for f in os.listdir(PRESETS_FOLDER) if f.endswith(".slaunch")]
                 next_index = len(existing) + 1
                 new_file_name = f"preset{next_index}.slaunch"
                 self.save_preset(new_file_name, new_title, new_type, script_content, new_icon)
-            self.reload_presets()
-            dialog.destroy()
+                self.add_preset_button(new_title, new_file_name, new_icon)
+                dialog.destroy()
 
-        save_button = tk.Button(dialog, text="Save", command=on_save)
+        save_button = tk.Button(dialog_frame, text="Save", command=on_save, bg=self.style.colors.success, fg="white")
         save_button.pack(pady=10)
 
     def open_add_dialog(self):
@@ -351,11 +397,24 @@ class ScriptLauncherApp:
         for widget in self.presets_frame.winfo_children():
             if widget != self.plus_btn:
                 widget.destroy()
+        # Clear the preset_widgets dictionary
+        self.preset_widgets.clear()
         # Reset position
         self.next_position = 0
         # Reload presets from the folder
         self.load_existing_presets()
         # Update the position of the plus button
+        self.update_plus_position()
+
+    def rearrange_presets(self):
+        print("Debug: Rearranging presets...")
+        self.next_position = 0
+        for widget in self.presets_frame.winfo_children():
+            if widget != self.plus_btn:
+                row = self.next_position // MAX_COLUMNS
+                col = self.next_position % MAX_COLUMNS
+                widget.grid_configure(row=row, column=col, padx=5, pady=5, sticky="nsew")
+                self.next_position += 1
         self.update_plus_position()
 
 if __name__ == "__main__":
