@@ -47,6 +47,8 @@ cp dist/ScriptLauncher build/
 echo "Step 7: Copying assets to the build directory..."
 cp -r assets/app_icons build/assets/
 
+cp icon.png build/
+
 # Step 8: Clean up unnecessary files
 echo "Step 8: Cleaning up unnecessary files..."
 rm -rf dist __pycache__ *.spec
