@@ -22,7 +22,6 @@ class ScriptLauncherApp:
         # self.style = Style(theme="simplex")
         # self.style = Style(theme="yeti")
 
-
         self.root = root
         self.root.title("ScriptLauncher")
         self.root.configure(highlightthickness=0)
@@ -297,27 +296,30 @@ class ScriptLauncherApp:
         title_entry.insert(0, title)
         title_entry.pack(pady=5, fill=tk.X)
 
-        type_label = tk.Label(dialog_frame, text="Type:")
-        type_label.pack(pady=5, anchor='w')
-        type_var = tk.StringVar(value=preset_type)
+        if not file_name:
+            type_label = tk.Label(dialog_frame, text="Type:")
+            type_label.pack(pady=5, anchor='w')
+            type_var = tk.StringVar(value=preset_type)
 
-        type_frame = tk.Frame(dialog_frame)
-        type_frame.pack(pady=5, anchor='w')
+            type_frame = tk.Frame(dialog_frame)
+            type_frame.pack(pady=5, anchor='w')
 
-        def select_type(selected_type):
-            type_var.set(selected_type)
-            standard_btn.config(relief=tk.SUNKEN if selected_type == "standard" else tk.RAISED)
-            pausable_btn.config(relief=tk.SUNKEN if selected_type == "pausable" else tk.RAISED)
-            recorded_btn.config(relief=tk.SUNKEN if selected_type == "recorded" else tk.RAISED)
-
-        standard_btn = tk.Button(type_frame, text="Standard", command=lambda: select_type("standard"))
-        standard_btn.pack(side=tk.LEFT, padx=2)
-        pausable_btn = tk.Button(type_frame, text="Pausable", command=lambda: select_type("pausable"))
-        pausable_btn.pack(side=tk.LEFT, padx=2)
-        recorded_btn = tk.Button(type_frame, text="Recorded", command=lambda: select_type("recorded"))
-        recorded_btn.pack(side=tk.LEFT, padx=2)
-
-        select_type(preset_type)
+            # Inside the show_preset_dialog method
+            
+            def select_type(selected_type):
+                type_var.set(selected_type)
+                standard_btn.config(relief=tk.SUNKEN if selected_type == "standard" else tk.RAISED, fg="black" if selected_type == "standard" else "white")
+                on_off_btn.config(relief=tk.SUNKEN if selected_type == "on_off" else tk.RAISED, fg="black" if selected_type == "on_off" else "white")
+                recorded_btn.config(relief=tk.SUNKEN if selected_type == "recorded" else tk.RAISED, fg="black" if selected_type == "recorded" else "white")
+            
+            standard_btn = tk.Button(type_frame, text="Standard", command=lambda: select_type("standard"))
+            standard_btn.pack(side=tk.LEFT, padx=2)
+            on_off_btn = tk.Button(type_frame, text="On/Off", command=lambda: select_type("on_off"))
+            on_off_btn.pack(side=tk.LEFT, padx=2)
+            recorded_btn = tk.Button(type_frame, text="Recorded", command=lambda: select_type("recorded"))
+            recorded_btn.pack(side=tk.LEFT, padx=2)
+            
+            select_type(preset_type)
 
         icon_label = tk.Label(dialog_frame, text="Icon:")
         icon_label.pack(pady=5, anchor='w')
@@ -342,7 +344,7 @@ class ScriptLauncherApp:
         def on_save():
             print("Debug: Save button clicked...")
             new_title = title_entry.get().strip()
-            new_type = type_var.get().strip()
+            new_type = type_var.get().strip() if not file_name else preset_type
             new_icon = icon_var.get().strip()
             script_content = content_text.get("1.0", tk.END).strip()
             if not new_title or not script_content:
