@@ -1,212 +1,368 @@
 import os
 import sys
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 import subprocess
-import signal
+from PIL import Image, ImageTk  # Ensure Pillow is installed: pip install Pillow
 
-SCRIPTS_FOLDER = "scripts"
-MAX_COLUMNS = 5
-BORDER_COLOR = "#87CEEB"
+PRESETS_FOLDER = "presets"
+ASSETS_FOLDER = os.path.join("assets", "app_icons")
+MAX_COLUMNS = 6  # Updated to 6 columns
 
 class ScriptLauncherApp:
     def __init__(self, root):
+        print("Debug: Initializing ScriptLauncherApp...")
         self.root = root
-        self.root.title("ShaneScriptLauncher")
-        self.root.configure(highlightbackground=BORDER_COLOR, highlightthickness=2)
-        self.next_position = 0  # Track next available position
+        self.root.title("ScriptLauncher")
+        self.root.configure(highlightthickness=0)
+        self.next_position = 0
 
-        signal.signal(signal.SIGINT, self.exit_app)
         root.protocol("WM_DELETE_WINDOW", self.exit_app)
 
         screen_w = root.winfo_screenwidth()
         screen_h = root.winfo_screenheight()
         win_w = int(screen_w * 0.9)
-        win_h = int(screen_h * 0.9)
+        win_h = int(screen_h * 0.95)
         pos_x = (screen_w - win_w) // 2
         pos_y = (screen_h - win_h) // 2
         self.root.geometry(f"{win_w}x{win_h}+{pos_x}+{pos_y}")
 
-        os.makedirs(SCRIPTS_FOLDER, exist_ok=True)
+        os.makedirs(PRESETS_FOLDER, exist_ok=True)
+        os.makedirs(ASSETS_FOLDER, exist_ok=True)
+
+        # Fixed width/height for buttons
+        self.button_width = 20
+        self.button_height = 5
 
         self.canvas = tk.Canvas(root, borderwidth=0, background="#ffffff")
         self.scrollbar = tk.Scrollbar(root, orient="vertical", command=self.canvas.yview)
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
-
         self.scrollbar.place(relx=1.0, rely=0.0, relheight=1.0, anchor="ne")
         self.canvas.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
 
-        self.scripts_frame = tk.Frame(self.canvas, background="#ffffff")
-        self.canvas.create_window((0, 0), window=self.scripts_frame, anchor="nw")
-
-        self.scripts_frame.bind("<Configure>", self.on_frame_configure)
+        self.presets_frame = tk.Frame(self.canvas, background="#ffffff")
+        self.canvas.create_window((0, 0), window=self.presets_frame, anchor="nw")
+        self.presets_frame.bind("<Configure>", self.on_frame_configure)
 
         self.plus_btn = tk.Button(
-            self.scripts_frame,
+            self.presets_frame,
             text="➕",
-            width=20,
-            height=5,
+            width=self.button_width,
+            height=self.button_height,
             command=self.open_add_dialog
         )
 
-        self.load_existing_scripts()
+        self.icon_images = {}
+        self.load_icon_images()
+
+        self.load_existing_presets()
         self.update_plus_position()
 
+    def load_icon_images(self):
+        print("Debug: Loading icons from assets/app_icons...")
+        if not os.path.exists(ASSETS_FOLDER):
+            os.makedirs(ASSETS_FOLDER)
+        for file in sorted(os.listdir(ASSETS_FOLDER)):
+            if file.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp")):
+                path = os.path.join(ASSETS_FOLDER, file)
+                try:
+                    image = Image.open(path).resize((24, 24), Image.LANCZOS)
+                    photo = ImageTk.PhotoImage(image)
+                    self.icon_images[file] = photo
+                except Exception as e:
+                    print(f"Error loading image {file}: {e}")
+
     def exit_app(self, *args):
+        print("Debug: Exiting application...")
         self.root.quit()
 
     def on_frame_configure(self, event):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def update_plus_position(self):
-        """Place the '+' button at the next available position"""
         row = self.next_position // MAX_COLUMNS
         col = self.next_position % MAX_COLUMNS
         self.plus_btn.grid(row=row, column=col, padx=5, pady=5)
 
-    def add_script_button(self, title, file_name):
+    def add_preset_button(self, title, file_name, icon='none'):
         self.plus_btn.grid_forget()
-        
-        frame = tk.Frame(self.scripts_frame, highlightbackground=BORDER_COLOR, highlightthickness=1)
-        
-        # Use current next_position for this script
+        print(f"Debug: Adding preset button '{title}' at position {self.next_position}...")
+        frame = tk.Frame(self.presets_frame)
         row = self.next_position // MAX_COLUMNS
         col = self.next_position % MAX_COLUMNS
-        
-        frame.grid(row=row, column=col, padx=5, pady=5)
+        frame.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
 
-        btn = tk.Button(frame, text=title, width=20, height=5,
-                       command=lambda f=file_name: self.run_script(f))
-        btn.pack(side=tk.LEFT)
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
 
-        buttons_right_frame = tk.Frame(frame)
-        buttons_right_frame.pack(side=tk.LEFT, padx=5)
+        # Container for the main button
+        button_frame = tk.Frame(frame)
+        button_frame.pack(fill=tk.BOTH, expand=True)
 
-        edit_btn = tk.Button(buttons_right_frame, text="✎", width=5, height=2,
-                          command=lambda f=file_name, t=title: self.edit_script(f, t))
-        edit_btn.pack(side=tk.TOP, pady=2)
+        # Main script button
+        btn = tk.Button(
+            button_frame,
+            text=title,
+            width=self.button_width,
+            height=self.button_height,
+            font=("TkDefaultFont", 12),
+            bg="#f0f0f0",
+            fg="#000000",
+            relief=tk.RAISED,
+            command=lambda f=file_name: self.run_preset(f)
+        )
+        btn.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        del_btn = tk.Button(buttons_right_frame, text="🗑", width=5, height=2,
-                         command=lambda f=file_name: self.delete_script(f, frame))
-        del_btn.pack(side=tk.TOP, pady=2)
+        # If icon is provided, place top-left
+        if icon != 'none' and icon in self.icon_images:
+            icon_label = tk.Label(button_frame, image=self.icon_images[icon], bg="#f0f0f0")
+            icon_label.place(x=5, y=5)
 
-        # Increment next_position for next item
+        # Edit/Delete stacked to the right
+        buttons_right_frame = tk.Frame(button_frame, bg="#f0f0f0")
+        buttons_right_frame.pack(side=tk.RIGHT, padx=2, pady=2)
+
+        edit_btn = tk.Button(
+            buttons_right_frame,
+            text="✎",
+            width=3,
+            height=1,
+            command=lambda f=file_name, t=title: self.edit_preset(f, t)
+        )
+        edit_btn.pack(side=tk.TOP, padx=2, pady=2)
+
+        del_btn = tk.Button(
+            buttons_right_frame,
+            text="🗑",
+            width=3,
+            height=1,
+            command=lambda f=file_name: self.delete_preset(f, frame)
+        )
+        del_btn.pack(side=tk.TOP, padx=2, pady=2)
+
         self.next_position += 1
         self.update_plus_position()
 
-    def delete_script(self, file_name, frame):
-        script_path = os.path.join(SCRIPTS_FOLDER, file_name)
-        if os.path.exists(script_path):
-            os.remove(script_path)
-        
+    def delete_preset(self, file_name, frame):
+        print(f"Debug: Deleting preset '{file_name}'...")
+        preset_path = os.path.join(PRESETS_FOLDER, file_name)
+        if os.path.exists(preset_path):
+            os.remove(preset_path)
         frame.destroy()
-        
-        # Reposition all remaining scripts
-        script_frames = [w for w in self.scripts_frame.winfo_children() if isinstance(w, tk.Frame)]
+        self.reload_presets()
+
+    def load_existing_presets(self):
+        print("Debug: Loading existing presets...")
         self.next_position = 0
-        
-        for script_frame in script_frames:
-            row = self.next_position // MAX_COLUMNS
-            col = self.next_position % MAX_COLUMNS
-            script_frame.grid(row=row, column=col, padx=5, pady=5)
-            self.next_position += 1
-        
-        self.update_plus_position()
+        for file in sorted(os.listdir(PRESETS_FOLDER)):
+            if file.endswith(".slaunch"):
+                preset_path = os.path.join(PRESETS_FOLDER, file)
+                with open(preset_path, "r") as f:
+                    lines = f.readlines()
+                if len(lines) >= 4:
+                    title_line = lines[0].strip().replace("title=", "")
+                    type_line = lines[1].strip().replace("type=", "")
+                    icon_line = lines[2].strip().replace("icon=", "")
+                    self.add_preset_button(title_line, file, icon_line)
 
-    def load_existing_scripts(self):
-        self.next_position = 0
-        for file in sorted(os.listdir(SCRIPTS_FOLDER)):
-            if file.endswith(".txt"):
-                script_path = os.path.join(SCRIPTS_FOLDER, file)
-                with open(script_path, "r") as f:
-                    lines = f.read().split('\n', 1)
-                title = lines[0] if lines else file
-                self.add_script_button(title, file)
+    def save_preset(self, file_name, title, preset_type, content, icon='none'):
+        print(f"Debug: Saving preset '{file_name}' (new format)...")
+        preset_path = os.path.join(PRESETS_FOLDER, file_name)
+        with open(preset_path, "w") as f:
+            f.write(f"title={title}\n")
+            f.write(f"type={preset_type}\n")
+            f.write(f"icon={icon}\n")
+            f.write("script=\n")
+            f.write(content)
 
-    def save_script(self, file_name, title, content):
-        script_path = os.path.join(SCRIPTS_FOLDER, file_name)
-        with open(script_path, "w") as f:
-            f.write(title + "\n" + content)
-
-    def run_script(self, file_name):
-        script_path = os.path.join(SCRIPTS_FOLDER, file_name)
-        if os.path.exists(script_path):
-            with open(script_path, 'r') as f:
-                f.readline()  # skip title
-                script_content = f.read().strip()
-            temp_script = os.path.join(SCRIPTS_FOLDER, f"temp_{file_name}")
-            with open(temp_script, 'w') as f:
-                f.write(script_content)
-            subprocess.run(["chmod", "777", temp_script])
-            subprocess.run(["gnome-terminal", "--", "bash", "-c", f"'{temp_script}'; exec bash"])
-            os.remove(temp_script)
+    def run_preset(self, file_name):
+        print(f"Debug: Running preset '{file_name}'...")
+        preset_path = os.path.join(PRESETS_FOLDER, file_name)
+        if os.path.exists(preset_path):
+            with open(preset_path, 'r') as f:
+                lines = f.readlines()
+            if len(lines) >= 4:
+                script_content = "".join(lines[4:]).strip()
+                temp_script = os.path.join(PRESETS_FOLDER, f"temp_{file_name}")
+                with open(temp_script, 'w') as ftemp:
+                    ftemp.write(script_content)
+                subprocess.run(["chmod", "777", temp_script])
+                subprocess.run(["gnome-terminal", "--", "bash", "-c", f"'{temp_script}'; exec bash"])
+                os.remove(temp_script)
         else:
-            messagebox.showerror("Error", "Script not found!")
+            messagebox.showerror("Error", "Preset not found!")
 
-    def show_script_dialog(self, title="", content="", file_name=None):
+    def open_icon_gallery(self, parent_dialog, icon_var, selected_icon_label):
+        print("Debug: Rebuilding icon gallery from scratch...")
+        gallery_popup = tk.Toplevel(parent_dialog)
+        gallery_popup.title("Select Icon")
+        gallery_popup.geometry("250x250")
+        gallery_popup.transient(parent_dialog)
+        gallery_popup.configure(highlightthickness=0)
+
+        canvas = tk.Canvas(gallery_popup, highlightthickness=0)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        scrollbar = tk.Scrollbar(gallery_popup, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+        icons_frame = tk.Frame(canvas, bg="#ffffff")
+        canvas.create_window((0, 0), window=icons_frame, anchor='nw')
+
+        def on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        icons_frame.bind("<Configure>", on_frame_configure)
+
+        def select_icon(icon_name):
+            print(f"Debug: Icon selected -> {icon_name}")
+            selected_icon_label.config(text=icon_name if icon_name != "none" else "")
+            icon_var.set(icon_name)
+            gallery_popup.destroy()
+
+        none_btn = tk.Button(
+            icons_frame,
+            text="",
+            width=1,
+            height=1,
+            command=lambda: select_icon("none"),
+            bg="#ffffff",
+            borderwidth=1,
+            relief=tk.RIDGE
+        )
+        none_btn.grid(row=0, column=0, padx=5, pady=5)
+
+        row_index = 0
+        col_index = 1
+        for icon_file, photo in sorted(self.icon_images.items()):
+            btn = tk.Button(
+                icons_frame,
+                image=photo,
+                command=lambda name=icon_file: select_icon(name),
+                bg="#ffffff",
+                borderwidth=1,
+                relief=tk.RIDGE
+            )
+            btn.grid(row=row_index, column=col_index, padx=5, pady=5)
+            col_index += 1
+            if col_index >= MAX_COLUMNS:
+                row_index += 1
+                col_index = 0
+
+    def show_preset_dialog(self, title="", content="", preset_type="standard",
+                           file_name=None, icon="none"):
+        print("Debug: Creating preset dialog...")
         dialog = tk.Toplevel(self.root)
-        dialog.title("Edit Script" if file_name else "Add Script")
-        dialog.geometry("800x600")
+        dialog.title("Edit Preset" if file_name else "Add Preset")
+        dialog.geometry("800x700")
         dialog.transient(self.root)
-        dialog.attributes('-alpha', 0.9)
-        dialog.configure(highlightbackground=BORDER_COLOR, highlightthickness=2)
+        dialog.configure(highlightthickness=0)
 
-        title_label = tk.Label(dialog, text="Script Title:")
-        title_label.pack(pady=10)
+        title_label = tk.Label(dialog, text="Title:")
+        title_label.pack(pady=5)
         title_entry = tk.Entry(dialog, width=80)
         title_entry.insert(0, title)
-        title_entry.pack(pady=10)
+        title_entry.pack(pady=5)
+
+        type_label = tk.Label(dialog, text="Type:")
+        type_label.pack(pady=5)
+        type_var = tk.StringVar(value=preset_type)
+
+        type_frame = tk.Frame(dialog)
+        type_frame.pack(pady=5)
+
+        def select_type(selected_type):
+            type_var.set(selected_type)
+            standard_btn.config(relief=tk.SUNKEN if selected_type == "standard" else tk.RAISED)
+            pausable_btn.config(relief=tk.SUNKEN if selected_type == "pausable" else tk.RAISED)
+            recorded_btn.config(relief=tk.SUNKEN if selected_type == "recorded" else tk.RAISED)
+
+        standard_btn = tk.Button(type_frame, text="Standard", command=lambda: select_type("standard"))
+        standard_btn.pack(side=tk.LEFT, padx=2)
+        pausable_btn = tk.Button(type_frame, text="Pausable", command=lambda: select_type("pausable"))
+        pausable_btn.pack(side=tk.LEFT, padx=2)
+        recorded_btn = tk.Button(type_frame, text="Recorded", command=lambda: select_type("recorded"))
+        recorded_btn.pack(side=tk.LEFT, padx=2)
+
+        select_type(preset_type)
+
+        icon_label = tk.Label(dialog, text="Icon:")
+        icon_label.pack(pady=5)
+
+        icon_frame = tk.Frame(dialog)
+        icon_frame.pack(pady=5)
+
+        icon_var = tk.StringVar(value=icon)
+        selected_icon_label = tk.Label(icon_frame, text=(icon if icon != "none" else ""))
+        selected_icon_label.pack(side=tk.LEFT, padx=5)
+
+        icon_popup_btn = tk.Button(icon_frame, text="Choose Icon",
+                                   command=lambda: self.open_icon_gallery(dialog, icon_var, selected_icon_label))
+        icon_popup_btn.pack(side=tk.LEFT, padx=5)
 
         content_label = tk.Label(dialog, text="Script Content:")
-        content_label.pack(pady=10)
+        content_label.pack(pady=5)
         content_text = tk.Text(dialog, width=80, height=20)
-        content_text.pack(pady=10)
+        content_text.pack(pady=5)
         content_text.insert("1.0", content)
 
         def on_save():
+            print("Debug: Save button clicked...")
             new_title = title_entry.get().strip()
+            new_type = type_var.get().strip()
+            new_icon = icon_var.get().strip()
             script_content = content_text.get("1.0", tk.END).strip()
             if not new_title or not script_content:
-                messagebox.showerror("Error", "Please fill in both fields.")
+                messagebox.showerror("Error", "Please fill in all fields.")
                 return
-
             if file_name:
-                self.save_script(file_name, new_title, script_content)
-                for widget in self.scripts_frame.winfo_children():
-                    if isinstance(widget, tk.Frame):
-                        script_btn = widget.winfo_children()[0]
-                        if script_btn['text'] == title:
-                            script_btn.configure(text=new_title)
+                self.save_preset(file_name, new_title, new_type, script_content, new_icon)
             else:
-                existing = [f for f in os.listdir(SCRIPTS_FOLDER)
-                          if f.startswith("script") and f.endswith(".txt")]
+                existing = [f for f in os.listdir(PRESETS_FOLDER) if f.endswith(".slaunch")]
                 next_index = len(existing) + 1
-                new_file_name = f"script{next_index}.txt"
-                self.save_script(new_file_name, new_title, script_content)
-                self.add_script_button(new_title, new_file_name)
+                new_file_name = f"preset{next_index}.slaunch"
+                self.save_preset(new_file_name, new_title, new_type, script_content, new_icon)
+            self.reload_presets()
             dialog.destroy()
 
         save_button = tk.Button(dialog, text="Save", command=on_save)
         save_button.pack(pady=10)
 
     def open_add_dialog(self):
-        self.show_script_dialog()
+        print("Debug: Opening Add Preset dialog...")
+        self.show_preset_dialog()
 
-    def edit_script(self, file_name, title):
-        script_path = os.path.join(SCRIPTS_FOLDER, file_name)
-        if os.path.exists(script_path):
-            with open(script_path, 'r') as f:
-                f.readline()  # skip title
-                content = f.read().strip()
-            self.show_script_dialog(title, content, file_name)
+    def edit_preset(self, file_name, old_title):
+        print(f"Debug: Editing preset '{file_name}'...")
+        preset_path = os.path.join(PRESETS_FOLDER, file_name)
+        if os.path.exists(preset_path):
+            with open(preset_path, 'r') as f:
+                lines = f.readlines()
+            if len(lines) >= 4:
+                title_val = lines[0].replace("title=", "").strip()
+                type_val = lines[1].replace("type=", "").strip()
+                icon_val = lines[2].replace("icon=", "").strip()
+                content_val = "".join(lines[4:]).strip()
+                self.show_preset_dialog(title_val, content_val, type_val, file_name, icon_val)
+
+    def reload_presets(self):
+        print("Debug: Reloading presets...")
+        # Remove all preset frames except the plus button
+        for widget in self.presets_frame.winfo_children():
+            if widget != self.plus_btn:
+                widget.destroy()
+        # Reset position
+        self.next_position = 0
+        # Reload presets from the folder
+        self.load_existing_presets()
+        # Update the position of the plus button
+        self.update_plus_position()
 
 if __name__ == "__main__":
     try:
         root = tk.Tk()
         app = ScriptLauncherApp(root)
         root.mainloop()
-    except KeyboardInterrupt:
-        sys.exit(0)
     except Exception as e:
         print(f"An error occurred: {e}")
         sys.exit(1)
