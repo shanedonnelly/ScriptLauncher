@@ -2,3 +2,5 @@ venv/
 ScriptLauncherOld.py
 test.py
 presets/*
+# build.sh
+build/

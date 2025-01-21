@@ -4,16 +4,27 @@ import tkinter as tk
 from tkinter import messagebox
 import subprocess
 from PIL import Image, ImageTk  # Ensure Pillow is installed: pip install Pillow
+import PIL._tkinter_finder  # Explicitly import PIL._tkinter_finder
 from ttkbootstrap import Style  # Ensure ttkbootstrap is installed: pip install ttkbootstrap
 
-PRESETS_FOLDER = "presets"
-ASSETS_FOLDER = os.path.join("assets", "app_icons")
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+PRESETS_FOLDER = resource_path("presets")
+ASSETS_FOLDER = resource_path(os.path.join("assets", "app_icons"))
 MAX_COLUMNS = 6  # Updated to 6 columns
+
 
 class ScriptLauncherApp:
     def __init__(self, root):
         print("Debug: Initializing ScriptLauncherApp...")
-        
         # Initialize ttkbootstrap style
         # Available themes: 'superhero', 'flatly', 'darkly', 'cosmo', 'journal', 'litera',
         # 'minty', 'pulse', 'sandstone', 'simplex', 'yeti', 'materia', etc.
