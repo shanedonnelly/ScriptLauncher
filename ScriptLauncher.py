@@ -369,8 +369,13 @@ class ScriptLauncherApp:
                     widget['button'].config(text=new_title)
                     # Update icon
                     if new_icon != "none" and new_icon in self.icon_images:
-                        widget['icon_label'].config(image=self.icon_images[new_icon])
-                        widget['icon_label'].image = self.icon_images[new_icon]  # Prevent GC
+                        if widget['icon_label'] is not None:
+                            widget['icon_label'].config(image=self.icon_images[new_icon])
+                            widget['icon_label'].image = self.icon_images[new_icon]  # Prevent GC
+                        else:
+                            widget['icon_label'] = tk.Label(widget['button'], image=self.icon_images[new_icon], bg=self.style.colors.primary)
+                            widget['icon_label'].place(x=5, y=5)
+                            widget['icon_label'].image = self.icon_images[new_icon]  # Prevent GC
                     else:
                         if widget['icon_label']:
                             widget['icon_label'].destroy()
