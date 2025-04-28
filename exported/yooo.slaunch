@@ -1,8 +1,0 @@
-title=hello bye
-type=on_off
-icon=xcode.png
-script_on=
-echo "hello"
-script_off=
-echo "bye"
-on_off_state=False

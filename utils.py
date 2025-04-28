@@ -3,6 +3,7 @@ import sys
 import platform
 import subprocess
 import shutil
+import json # Import json for handling embedded data
 from PyQt6.QtWidgets import QMessageBox # type: ignore
 
 # Determine the base path for resources, accommodating PyInstaller
@@ -17,12 +18,12 @@ except AttributeError:
 PRESETS_FOLDER = os.path.join(BASE_PATH, "presets")
 ASSETS_FOLDER = os.path.join(BASE_PATH, "assets")
 ICONS_FOLDER = os.path.join(ASSETS_FOLDER, "app_icons")
-RECORDS_FOLDER = os.path.join(BASE_PATH, "records") # Folder for recordings
 
 # Ensure necessary folders exist at startup
 os.makedirs(PRESETS_FOLDER, exist_ok=True)
 os.makedirs(ICONS_FOLDER, exist_ok=True)
-os.makedirs(RECORDS_FOLDER, exist_ok=True)
+# RECORDS_FOLDER is no longer strictly needed by utils for saving/loading presets
+# os.makedirs(RECORDS_FOLDER, exist_ok=True) # Keep if recording_module still uses it independently
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -50,7 +51,8 @@ def load_presets():
                 with open(preset_path, "r", encoding='utf-8') as f: # Specify encoding
                     lines = f.readlines()
 
-                if len(lines) < 3: # Need at least title, type, icon
+                # Basic validation (at least title, type, icon)
+                if len(lines) < 3:
                     print(f"Warning: Skipping malformed preset file (too short): {file_name}")
                     continue
 
@@ -64,17 +66,32 @@ def load_presets():
                     'script_on': "",
                     'script_off': "",
                     'on_off_state': False,
-                    'record_path': None,
+                    # --- Remove record_path, add recorded_events ---
+                    # 'record_path': None,
+                    'recorded_events': None, # To store the parsed JSON data
                     'how_many': 1
                 }
 
                 content_lines = lines[3:] # Content starts from the 4th line
                 current_section = None
+                json_lines = []
+                in_record_section = False
 
                 for i, line in enumerate(content_lines):
                     stripped_line = line.strip()
 
-                    # Detect section headers
+                    # --- Stop processing other sections if we hit the record marker ---
+                    if stripped_line == "record=":
+                        in_record_section = True
+                        current_section = None # Ensure no other section is active
+                        continue
+
+                    # --- If in record section, collect lines for JSON ---
+                    if in_record_section:
+                        json_lines.append(line) # Keep original lines including indentation/newlines
+                        continue
+
+                    # Detect section headers (only if not in record section)
                     if stripped_line == "script=":
                         current_section = "script"
                         continue
@@ -86,13 +103,6 @@ def load_presets():
                         continue
                     elif stripped_line.startswith("on_off_state="):
                         preset_data['on_off_state'] = stripped_line.replace("on_off_state=", "") == "True"
-                        current_section = None # End of script_off section
-                        continue
-                    elif stripped_line.startswith("record_path="):
-                        preset_data['record_path'] = stripped_line.replace("record_path=", "")
-                        # Make path absolute relative to RECORDS_FOLDER if it's just a filename
-                        if preset_data['record_path'] and not os.path.isabs(preset_data['record_path']) and not os.path.dirname(preset_data['record_path']):
-                            preset_data['record_path'] = os.path.join(RECORDS_FOLDER, preset_data['record_path'])
                         current_section = None
                         continue
                     elif stripped_line.startswith("how_many="):
@@ -105,8 +115,7 @@ def load_presets():
 
                     # Append line to the current section if it's active
                     if current_section == "script":
-                        # Append the original line (with newline) unless it's the last line
-                        preset_data['script'] += line #if i < len(content_lines) - 1 else stripped_line
+                        preset_data['script'] += line
                     elif current_section == "script_on":
                         preset_data['script_on'] += line
                     elif current_section == "script_off":
@@ -117,11 +126,21 @@ def load_presets():
                 preset_data['script_on'] = preset_data['script_on'].rstrip('\n')
                 preset_data['script_off'] = preset_data['script_off'].rstrip('\n')
 
-                # Validation for recorded type
-                if preset_data['type'] == "recorded" and not preset_data['record_path']:
-                    print(f"Warning: 'record_path=' missing or empty in recorded preset: {file_name}")
-                    # Decide whether to skip or allow loading with error
-                    # continue # Option: skip loading this preset
+                # --- Process collected JSON lines for recorded type ---
+                if preset_data['type'] == "recorded":
+                    if json_lines:
+                        json_string = "".join(json_lines)
+                        try:
+                            preset_data['recorded_events'] = json.loads(json_string)
+                            if not isinstance(preset_data['recorded_events'], list):
+                                 print(f"Warning: Parsed JSON for {file_name} is not a list. Resetting.")
+                                 preset_data['recorded_events'] = None
+                        except json.JSONDecodeError as e:
+                            print(f"Error decoding embedded JSON in {file_name}: {e}")
+                            preset_data['recorded_events'] = None # Set to None if JSON is invalid
+                    else:
+                        print(f"Warning: 'record=' section missing or empty in recorded preset: {file_name}")
+                        preset_data['recorded_events'] = None
 
                 presets.append(preset_data)
             except Exception as e:
@@ -133,6 +152,7 @@ def load_presets():
 
 def save_preset(preset_data):
     """ Saves a single preset data dictionary to a .slaunch file.
+        Embeds JSON for 'recorded' type.
         Returns a tuple: (success: bool, message_or_data: str or dict)
     """
     file_name = preset_data.get('file_name')
@@ -156,20 +176,22 @@ def save_preset(preset_data):
 
             preset_type = preset_data.get('type')
             if preset_type == "on_off":
-                f.write(f"script_on=\n{preset_data.get('script_on', '')}\n") # Keep trailing newline for script block
-                f.write(f"script_off=\n{preset_data.get('script_off', '')}\n") # Keep trailing newline
+                f.write(f"script_on=\n{preset_data.get('script_on', '')}\n")
+                f.write(f"script_off=\n{preset_data.get('script_off', '')}\n")
                 f.write(f"on_off_state={preset_data.get('on_off_state', False)}\n")
             elif preset_type == "recorded":
-                record_path = preset_data.get('record_path', '')
-                # Store only the filename if it's inside RECORDS_FOLDER
-                if record_path and os.path.dirname(record_path) == RECORDS_FOLDER:
-                    record_path = os.path.basename(record_path)
-
-                f.write(f"script=\n") # Empty script section
-                f.write(f"record_path={record_path}\n")
+                f.write(f"script=\n") # Empty script section for recorded type
                 f.write(f"how_many={preset_data.get('how_many', 1)}\n")
+                # --- Embed JSON data ---
+                f.write("record=\n") # Marker for embedded JSON
+                recorded_events = preset_data.get('recorded_events')
+                if recorded_events and isinstance(recorded_events, list):
+                    json.dump(recorded_events, f, indent=2) # Write JSON with indentation
+                    f.write("\n") # Add a final newline for clarity
+                else:
+                    f.write("[]\n") # Write empty JSON array if no data
             else: # Standard
-                f.write(f"script=\n{preset_data.get('script', '')}\n") # Keep trailing newline
+                f.write(f"script=\n{preset_data.get('script', '')}\n")
 
         print(f"Preset saved: {preset_path}")
         return True, preset_data # Return success and the (potentially updated) data
@@ -226,7 +248,7 @@ def run_script(script_content):
 
         # --- Execute in a new terminal --- 
         cmd_list = []
-        shell_cmd = f"\"{temp_script_path}\"; exec bash" # Command to run inside the terminal
+        shell_cmd = f"cd && \"{temp_script_path}\"; exec bash" # Command to run inside the terminal
 
         if os_platform == "Linux":
             terminals = {
@@ -241,7 +263,7 @@ def run_script(script_content):
                 if shutil.which(term): # Use shutil.which to find executable
                     cmd_list = args
                     if term in ["xfce4-terminal", "lxterminal", "xterm"]:
-                         cmd_list.append(f'bash -c "{shell_cmd}"') # Needs careful quoting
+                         cmd_list.append(f'bash -c " ; {shell_cmd}"') # Needs careful quoting
                     else:
                          cmd_list.append(shell_cmd)
                     found_terminal = True

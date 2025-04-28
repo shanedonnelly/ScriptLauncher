@@ -644,4 +644,4 @@ QPushButton#IconButton:checked {{
 """
 
 # Default stylesheet (can be changed later)
-STYLESHEET = STYLESHEET_LIGHT # Or STYLESHEET_DARK
+STYLESHEET = STYLESHEET_DARK # Or STYLESHEET_LIGHT

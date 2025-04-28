@@ -98,7 +98,7 @@ class PresetDialog(QDialog):
         # On/Off
         self.on_off_widget = QWidget()
         on_off_layout = QVBoxLayout(self.on_off_widget)
-        self.initial_state_check = QCheckBox("Start in 'ON' state")
+        self.initial_state_check = QCheckBox("Check if the current state is ON")
         self.initial_state_check.setChecked(self.preset_data.get('on_off_state', False))
         on_off_layout.addWidget(self.initial_state_check)
         on_off_layout.addWidget(QLabel("Script ON:"))

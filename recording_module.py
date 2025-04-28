@@ -6,9 +6,6 @@ from pynput import mouse, keyboard
 from pynput.mouse import Listener as MouseListener, Controller as MouseController, Button
 from pynput.keyboard import Listener as KeyboardListener, Controller as KeyboardController, Key
 
-# Define the folder to save recordings
-RECORDS_FOLDER = os.path.join(os.path.dirname(__file__), "records")
-os.makedirs(RECORDS_FOLDER, exist_ok=True)
 
 class Recorder:
     """Handles recording of mouse and keyboard events."""
@@ -202,54 +199,28 @@ class Recorder:
     def is_recording(self):
         return self._recording
 
-def save_record(events, base_path=RECORDS_FOLDER):
-    """Saves the recorded events to a JSON file."""
-    if not events:
-        print("No events to save.")
-        return None
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    file_name = f"record_{timestamp}.json"
-    file_path = os.path.join(base_path, file_name)
-    try:
-        with open(file_path, 'w') as f:
-            json.dump(events, f, indent=2) # Use indent for readability
-        print(f"Recording saved to {file_path}")
-        return file_path
-    except IOError as e:
-        print(f"Error saving recording to {file_path}: {e}")
-        return None
-    except Exception as e:
-        print(f"An unexpected error occurred during saving: {e}")
-        return None
+
+# --- save_record and load_record are no longer needed by the main app ---
+# --- They can be removed or kept for testing/debugging purposes ---
+# def save_record(events, base_path=RECORDS_FOLDER): ...
+# def load_record(file_path): ...
 
 
-def load_record(file_path):
-    """Loads recorded events from a JSON file."""
-    try:
-        with open(file_path, 'r') as f:
-            events = json.load(f)
-        print(f"Recording loaded from {file_path}")
-        return events
-    except FileNotFoundError:
-        print(f"Error: Recording file not found at {file_path}")
-        return None
-    except json.JSONDecodeError as e:
-        print(f"Error decoding JSON from {file_path}: {e}")
-        return None
-    except Exception as e:
-        print(f"An unexpected error occurred during loading: {e}")
-        return None
-
-# Modified replay_events to accept a stop_event
-def replay_events(record_path, how_many_times=1, speed_factor=1.0, stop_event=None):
-    """Replays recorded events from a file multiple times, allowing external stopping."""
-    events = load_record(record_path)
-    if not events:
-        print(f"Could not load events from {record_path}")
+# --- Modified replay_events to accept events_data directly ---
+def replay_events(events_data, how_many_times=1, speed_factor=1.0, stop_event=None):
+    """Replays recorded events from the provided list multiple times, allowing external stopping."""
+    # --- Remove loading from file ---
+    # events = load_record(record_path)
+    # if not events:
+    #     print(f"Could not load events from {record_path}")
+    #     return
+    if not events_data or not isinstance(events_data, list):
+        print(f"Invalid or empty events data provided for replay.")
         return
 
-    # --- Moved the finally block inside the try for KeyboardInterrupt ---
-    # --- This ensures cleanup happens even with Ctrl+C ---
+    # Use the provided events_data directly
+    events = events_data
+
     try:
         if how_many_times == -1:
             print("Replaying indefinitely (Stop signal can interrupt)...")
@@ -280,7 +251,7 @@ def replay_events(record_path, how_many_times=1, speed_factor=1.0, stop_event=No
                     interrupted = stop_event.wait(0.5) if stop_event else time.sleep(0.5)
                     if interrupted: break
 
-        print("Replay loop finished or stopped.") # Changed message slightly
+        print("Replay loop finished or stopped.")
 
     except KeyboardInterrupt: # Keep Ctrl+C as a backup stop
         print("\nReplay stopped by user (KeyboardInterrupt).")
@@ -288,14 +259,10 @@ def replay_events(record_path, how_many_times=1, speed_factor=1.0, stop_event=No
             stop_event.set() # Ensure stop event is set if Ctrl+C is used
 
     finally:
-        # The _play_sequence function handles releasing keys pressed *during* its execution.
-        # Avoid the potentially blocking global release here.
-        print("replay_events finally block reached.") # DEBUG
-        # _release_all_keys_buttons() # <-- Keep commented out for now
+        print("replay_events finally block reached.")
         pass
 
 
-# Modified _play_sequence to accept and check stop_event more reliably
 def _play_sequence(events, speed_factor=1.0, stop_event=None):
     """Plays a single sequence of events, checking for stop signal."""
     mouse_controller = MouseController()
@@ -472,31 +439,14 @@ def _release_all_keys_buttons():
      # It seems to cause hangs when called from the replay thread.
      print("Attempting to release common keys and buttons globally... (Currently Disabled)")
      return # Skip execution
-     # kb_controller = KeyboardController()
-     # ms_controller = MouseController()
-     # common_keys = [
-     #     Key.shift, Key.shift_r, Key.ctrl, Key.ctrl_l, Key.ctrl_r,
-     #     Key.alt, Key.alt_l, Key.alt_r, Key.cmd, Key.cmd_l, Key.cmd_r # cmd for macOS
-     # ]
-     # common_buttons = [Button.left, Button.right, Button.middle]
-
-     # for key in common_keys:
-     #     try: kb_controller.release(key)
-     #     except Exception: pass # Ignore errors here
-     # for btn in common_buttons:
-     #     try: ms_controller.release(btn)
-     #     except Exception: pass # Ignore errors here
-     # print("Global release attempt finished.")
 
 
-# Example usage (optional, can be removed or kept for testing)
+# --- Update example usage to reflect changes (optional) ---
 if __name__ == '__main__':
-    # Example: Record and then replay
     recorder = Recorder()
     print("Starting recording for 10 seconds (or stop with LeftClick+Shift)...")
     recorder.start_recording()
 
-    # Wait for recording to finish (either by timer or manual stop)
     start_wait = time.time()
     while recorder.is_recording() and time.time() - start_wait < 10:
         time.sleep(0.5)
@@ -506,17 +456,14 @@ if __name__ == '__main__':
         events_data = recorder.stop_recording()
     else:
         print("Recording stopped manually.")
-        events_data = recorder.events # Get events collected so far (might need finalize)
-        # It's better to rely on the return value of stop_recording()
-        # For simplicity here, we assume stop_recording was called by the combo thread
-        # A more robust way would involve signaling between threads.
-
+        # Get events directly from the recorder instance after stop_recording was called internally
+        events_data = recorder.events # Or better, rely on the return value if possible
 
     if events_data:
-        saved_file = save_record(events_data)
-        if saved_file:
-            print("\nStarting replay in 3 seconds...")
-            time.sleep(3)
-            replay_events(saved_file, how_many_times=1)
+        print(f"\nCaptured {len(events_data)} events.")
+        # --- Replay directly from data ---
+        print("\nStarting replay in 3 seconds...")
+        time.sleep(3)
+        replay_events(events_data, how_many_times=1)
     else:
         print("No events were recorded.")

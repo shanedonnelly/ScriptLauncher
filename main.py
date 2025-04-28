@@ -17,21 +17,20 @@ from preset_dialog import PresetDialog
 from styles import STYLESHEET_LIGHT, STYLESHEET_DARK
 
 try:
-    # Pass events list directly to replay_events
-    from recording_module import replay_events # Removed RECORDS_FOLDER import if not needed here
+    # --- Import the modified replay_events ---
+    from recording_module import replay_events
 except ImportError as e:
     print(f"Error importing from recording_module: {e}")
-    # Dummy function signature updated
-    def replay_events(events_data, how_many_times, speed=1, stop_event=None):
+    # --- Update dummy function signature ---
+    def replay_events(events_data, how_many_times, speed=1.0, stop_event=None):
         print(f"Dummy Replay: {len(events_data)} events, times: {how_many_times}")
-    # RECORDS_FOLDER = "records" # Define in utils.py
 
 from utils import (
     load_presets, delete_preset, run_script, get_icon_path, PRESETS_FOLDER,
     save_preset
 )
 
-MAX_COLUMNS = 5
+MAX_COLUMNS = 4
 # --- Define fixed size and title constraints ---
 PRESET_WIDGET_WIDTH = 200 # Adjust as needed for 16 chars + icon + buttons
 PRESET_WIDGET_HEIGHT = 80  # Adjust as needed for 2 lines + icon
@@ -233,13 +232,13 @@ class PresetWidget(QFrame):
 
 
     def toggle_replay(self):
-        """Starts or stops the replay of a recorded preset."""
-        # ... (logic remains the same) ...
+        """Starts or stops the replay of a recorded preset using embedded data."""
         if self._is_replaying:
             print("Stop requested.")
             if self._replay_stop_event:
                 self._replay_stop_event.set()
         else:
+            # --- Get embedded events data ---
             recorded_events = self.preset_data.get('recorded_events')
             how_many = self.preset_data.get('how_many', 1)
             print(f"Attempting to replay embedded events for: {self.file_name}")
@@ -249,6 +248,7 @@ class PresetWidget(QFrame):
                 self._replay_stop_event = threading.Event()
                 self._replay_thread = threading.Thread(
                     target=self._run_replay_thread,
+                    # --- Pass events data directly ---
                     args=(recorded_events, times_to_play, self._replay_stop_event),
                     daemon=True
                 )
@@ -263,10 +263,10 @@ class PresetWidget(QFrame):
 
     def _run_replay_thread(self, events_data, times, stop_event):
         """Target function for the replay thread."""
-        # ... (logic remains the same) ...
         try:
             print(f"Replay thread ({threading.get_ident()}) starting for {self.file_name}")
-            replay_events(events_data, times, stop_event=stop_event) # Pass data directly
+            # --- Call modified replay_events with data ---
+            replay_events(events_data, times, stop_event=stop_event)
             print(f"Replay thread ({threading.get_ident()}) finished execution for {self.file_name}")
         except Exception as e:
             # Use QTimer.singleShot to show message box from main thread
@@ -362,7 +362,7 @@ class MainWindow(QMainWindow):
     # ... (__init__ remains the same) ...
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ScriptLauncher Qt")
+        self.setWindowTitle("ScriptLauncher")
         self.setGeometry(100, 100, 900, 700) # x, y, width, height
 
         self.presets = {} # Dictionary to store preset data {file_name: data}
@@ -610,18 +610,9 @@ class MainWindow(QMainWindow):
 
 # --- Main Execution ---
 if __name__ == '__main__':
-    # ... (folder creation remains the same) ...
     os.makedirs(PRESETS_FOLDER, exist_ok=True)
-    # Ensure assets/app_icons exists if needed by get_icon_path
     assets_icons = os.path.join(os.path.dirname(__file__), 'assets', 'app_icons')
     os.makedirs(assets_icons, exist_ok=True)
-    # Ensure records folder exists (moved from utils for clarity if recording_module is used)
-    try:
-        from recording_module import RECORDS_FOLDER
-        os.makedirs(RECORDS_FOLDER, exist_ok=True)
-    except (ImportError, NameError):
-        pass # Only create if module/variable exists
-
 
     app = QApplication(sys.argv)
     app_icon_path = get_icon_path('icon.png')
