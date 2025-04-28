@@ -1,13 +1,9 @@
 # ScriptLauncher
 
-A simple desktop application for Linux to easily organize, manage, and launch your scripts, commands, and recorded macros with a clean graphical interface.
-
-<!-- Optional: Add a screenshot or GIF here -->
-<!-- ![ScriptLauncher Screenshot](link/to/your/screenshot.png) -->
-
+A cross-plateform desktop application to easily organize, manage, and launch your scripts, commands, and recorded macros with a simple graphical interface.
+Only Linux release currently available : [releases page](https://github.com/shanedonnelly/ScriptLauncher/releases)
 ## Features
 
-*   **Grid-Based Interface:** View your presets in an easy-to-navigate grid.
 *   **Multiple Preset Types:**
     *   **Standard:** Run any shell script or command.
     *   **On/Off:** Toggle between two different scripts (e.g., start/stop a service).
@@ -15,9 +11,9 @@ A simple desktop application for Linux to easily organize, manage, and launch yo
 *   **Customizable Presets:** Assign titles and icons to your presets.
 *   **Import/Export:** Share your presets easily using `.slaunch` files.
 *   **Recording:** Built-in recorder for mouse and keyboard events (uses `pynput`).
-    *   *Stop recording by holding Left Mouse Button + Left Shift for 2 seconds.*
-*   **Replay Control:** Play recorded macros once, multiple times, or indefinitely (can be stopped).
-*   **Theme Support:** Switch between Light and Dark themes.
+    *   *Stop recording by cliking back on the App. 
+*   **Replay Control:** Play recorded macros once or multiple times (can be stopped).
+*   **Theme Support:** Switch between Light and Dark themes. 
 *   **Standalone Packaging:** Bundled into a single executable and `.deb` package for easy installation.
 
 ## Preset Types Explained
@@ -41,13 +37,19 @@ A simple desktop application for Linux to easily organize, manage, and launch yo
 
 ### Using the .deb Package (Recommended for Ubuntu/Debian)
 
-1.  Download the latest `.deb` file (e.g., `scriptlauncher_X.Y_amd64.deb`) from the [GitHub Releases page](https://github.com/shanedonnelly/ScriptLauncher/releases). <!-- !!! CHANGE LINK !!! -->
+1.  Download the latest `.deb` file (e.g., `scriptlauncher_X.Y_amd64.deb`) from the [releases page](https://github.com/shanedonnelly/ScriptLauncher/releases).
+
+## Uninstallation for Ubuntu/Debian 
+```bash
+sudo apt remove scriptlauncher
+sudo apt autoremove
+```
 
 ### From Source (for Development / Other Linux Distros)
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/YOUR_USERNAME/YOUR_REPONAME.git <!-- !!! CHANGE LINK !!! -->
+    git clone https://github.com/shanedonnelly/ScriptLauncher.git
     cd ScriptLauncher/qt_app
     ```
 2.  **Create and activate a virtual environment (Recommended):**
