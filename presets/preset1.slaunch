@@ -1,5 +1,6 @@
-title=echo "hello"
-type=standard
-icon=none
+title=recorded bot
+type=recorded
+icon=018-bot.png
 script=
-echo "hello"
+record_path=
+how_many=1

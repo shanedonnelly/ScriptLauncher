@@ -17,14 +17,14 @@ FONT_SIZE_LARGE = "12pt"
 FONT_SIZE_SMALL = "9pt"
 
 # --- Button Size ---
-# Define a standard size. Adjust as needed.
-BUTTON_SIZE = 30 # Standard height for most buttons
-BUTTON_PADDING_H = "10px" # Horizontal padding
-BUTTON_PADDING_V = "5px" # Vertical padding
-ROUND_BUTTON_SIZE = 35 # For Add button
+BUTTON_SIZE = 30 # Default height for most buttons
+BUTTON_PADDING_H = "10px"
+BUTTON_PADDING_V = "5px"
+# ROUND_BUTTON_SIZE = 35 # No longer used?
+ACTION_BUTTON_SIZE_PX = 25 # Define the size in pixels for fixed size buttons
 
 # --- General ---
-BORDER_RADIUS = "2px" # Minimal rounding
+BORDER_RADIUS = "2px"
 
 # =============================================
 #          LIGHT MODE STYLESHEET
@@ -49,39 +49,43 @@ QScrollArea {{
 
 #presetGridWidget {{
     background-color: {PRIMARY_LIGHT};
-    padding: 5px; /* Reduced padding */
+    padding: 5px;
 }}
 
 /* --- Preset Widget --- */
 PresetWidget {{
-    background-color: white; /* Keep presets distinct */
+    background-color: white;
     border: 1px solid {BORDER_COLOR_LIGHT};
     border-radius: {BORDER_RADIUS};
     color: {TEXT_COLOR_LIGHT};
-    padding: 5px; /* Reduced padding */
+    padding: 5px; /* Internal padding */
+    /* Fixed size is set in Python code (setFixedSize) */
 }}
 
 PresetWidget:hover {{
-    background-color: #EAEAEA; /* Subtle hover */
+    background-color: #EAEAEA;
 }}
 
 /* Title Label within PresetWidget */
 PresetWidget QLabel {{
     background-color: transparent;
     color: {TEXT_COLOR_LIGHT};
-    font-weight: bold;
 }}
+/* Icon label */
+PresetWidget QLabel#icon_label {{
+    font-weight: normal;
+}}
+
 
 /* --- Buttons --- */
 QPushButton {{
     background-color: {SECONDARY_LIGHT};
     color: white;
-    border: 1px solid {SECONDARY_LIGHT}; /* Add subtle border */
+    border: 1px solid {SECONDARY_LIGHT};
     padding: {BUTTON_PADDING_V} {BUTTON_PADDING_H};
     border-radius: {BORDER_RADIUS};
     font-size: {FONT_SIZE_BASE};
-    min-height: {BUTTON_SIZE}px;
-    /* min-width: {BUTTON_SIZE}px; */ /* Let padding define width generally */
+    min-height: {BUTTON_SIZE}px; /* Default min height for dialog buttons etc. */
 }}
 
 QPushButton:hover {{
@@ -111,46 +115,49 @@ QPushButton:checked:hover {{
 
 /* Specific Button Types */
 
-/* Add Button (+) */
+/* Add Button (+) - Style for the large button filling a grid slot */
 #AddButton {{
-    font-size: {FONT_SIZE_LARGE};
-    font-weight: bold;
-    background-color: {SECONDARY_LIGHT};
-    color: white;
-    border: none; /* Remove border */
-    min-width: {ROUND_BUTTON_SIZE}px;
-    max-width: {ROUND_BUTTON_SIZE}px;
-    min-height: {ROUND_BUTTON_SIZE}px;
-    max-height: {ROUND_BUTTON_SIZE}px;
-    border-radius: {ROUND_BUTTON_SIZE // 2}px; /* Make it round */
-    padding: 0px; /* Reset padding for round button */
+    font-size: 24pt;
+    font-weight: lighter;
+    background-color: #EAEAEA;
+    color: #888888;
+    border: 2px dashed {BORDER_COLOR_LIGHT};
+    padding: 10px; /* Internal padding */
+    border-radius: {BORDER_RADIUS};
+    /* Fixed size is set in Python code (setFixedSize) */
+    /* Remove min/max width/height */
 }}
 #AddButton:hover {{
-    background-color: #522260;
+    background-color: #DCDCDC;
+    color: #666666;
+    border-color: #C0C0C0;
 }}
 
+/* --- Right Column Buttons in PresetWidget --- */
 /* Edit Button (✎) */
 #EditButton {{
-    /* Inherits general QPushButton style, ensure fixed size is removed in main.py */
-    font-size: {FONT_SIZE_BASE}; /* Standardize font size */
-    min-width: {BUTTON_SIZE}px; /* Enforce min width */
-    padding: 0; /* Adjust padding if needed for icon alignment */
-    /* Optional: Use a less prominent color if desired */
-    /* background-color: #A0A0A0; */
-    /* border-color: #A0A0A0; */
+    font-size: {FONT_SIZE_BASE};
+    min-width: {ACTION_BUTTON_SIZE_PX}px; /* Keep fixed size for these small buttons */
+    max-width: {ACTION_BUTTON_SIZE_PX}px;
+    min-height: {ACTION_BUTTON_SIZE_PX}px;
+    max-height: {ACTION_BUTTON_SIZE_PX}px;
+    padding: 0;
+    background-color: #A0A0A0;
+    border-color: #A0A0A0;
 }}
 #EditButton:hover {{
-    /* background-color: #888888; */
+    background-color: #888888;
 }}
 
 /* Delete Button (🗑) */
 #DeleteButton {{
-    /* Inherits general QPushButton style, ensure fixed size is removed in main.py */
     font-size: {FONT_SIZE_BASE};
-    min-width: {BUTTON_SIZE}px;
+    min-width: {ACTION_BUTTON_SIZE_PX}px;
+    max-width: {ACTION_BUTTON_SIZE_PX}px;
+    min-height: {ACTION_BUTTON_SIZE_PX}px;
+    max-height: {ACTION_BUTTON_SIZE_PX}px;
     padding: 0;
-    /* Optional: Use a distinct color for delete */
-    background-color: #dc3545; /* Keep red for delete */
+    background-color: #dc3545;
     border-color: #dc3545;
     color: white;
 }}
@@ -159,17 +166,33 @@ QPushButton:checked:hover {{
     border-color: #c82333;
 }}
 
+/* --- Remove RunButton style --- */
+/* #RunButton {{ ... }} */
+
 /* On/Off Toggle Button (▶/⏸) */
 #OnOffToggleButton {{
-    /* Inherits general QPushButton style, ensure fixed size is removed in main.py */
-    font-size: {FONT_SIZE_LARGE}; /* Keep icon large */
-    min-width: {BUTTON_SIZE}px; /* Enforce min width */
+    font-size: {FONT_SIZE_LARGE};
+    min-width: {ACTION_BUTTON_SIZE_PX}px;
+    max-width: {ACTION_BUTTON_SIZE_PX}px;
+    min-height: {ACTION_BUTTON_SIZE_PX}px;
+    max-height: {ACTION_BUTTON_SIZE_PX}px;
     padding: 0;
+    /* Inherits base purple, checked state handled above */
 }}
-/* Checked state handled by general QPushButton:checked */
 
+/* Replay Button (▶/■ for recorded) */
+#ReplayButton {{
+    font-size: {FONT_SIZE_LARGE};
+    min-width: {ACTION_BUTTON_SIZE_PX}px;
+    max-width: {ACTION_BUTTON_SIZE_PX}px;
+    min-height: {ACTION_BUTTON_SIZE_PX}px;
+    max-height: {ACTION_BUTTON_SIZE_PX}px;
+    padding: 0;
+    /* Inherits base purple */
+}}
 
-/* --- Input Fields --- */
+/* --- Input Fields, ComboBox, CheckBox, MenuBar, Menu, Tooltips, MessageBox, Item Selection --- */
+/* ... (These styles remain largely the same) ... */
 QLineEdit, QTextEdit, QSpinBox {{
     border: 1px solid {BORDER_COLOR_LIGHT};
     padding: 5px;
@@ -185,7 +208,6 @@ QLineEdit:focus, QTextEdit:focus, QSpinBox:focus {{
     outline: none;
 }}
 
-/* --- ComboBox --- */
 QComboBox {{
     border: 1px solid {BORDER_COLOR_LIGHT};
     border-radius: {BORDER_RADIUS};
@@ -206,11 +228,10 @@ QComboBox::drop-down {{
 }}
 
 QComboBox::down-arrow {{
-    /* Use a standard arrow or leave default */
     /* image: url(:/qt-project.org/styles/commonstyle/images/down_arrow.png); */
 }}
 
-QComboBox QAbstractItemView {{ /* Style for the dropdown list */
+QComboBox QAbstractItemView {{
     border: 1px solid {BORDER_COLOR_LIGHT};
     background-color: white;
     color: {TEXT_COLOR_LIGHT};
@@ -219,9 +240,8 @@ QComboBox QAbstractItemView {{ /* Style for the dropdown list */
     outline: none;
 }}
 
-/* --- CheckBox --- */
 QCheckBox {{
-    spacing: 5px; /* Space between indicator and text */
+    spacing: 5px;
 }}
 QCheckBox::indicator {{
     width: 14px;
@@ -238,7 +258,6 @@ QCheckBox::indicator:unchecked:hover {{
 QCheckBox::indicator:checked {{
     background-color: {SECONDARY_LIGHT};
     border: 1px solid {SECONDARY_LIGHT};
-    /* Add a checkmark image if desired */
     /* image: url(path/to/light-check.png); */
 }}
 QCheckBox::indicator:checked:hover {{
@@ -246,9 +265,8 @@ QCheckBox::indicator:checked:hover {{
     border: 1px solid #522260;
 }}
 
-/* --- Menu Bar --- */
 QMenuBar {{
-    background-color: #EAEAEA; /* Slightly darker than main bg */
+    background-color: #EAEAEA;
     border-bottom: 1px solid {BORDER_COLOR_LIGHT};
 }}
 QMenuBar::item {{
@@ -263,14 +281,13 @@ QMenuBar::item:pressed {{
     color: white;
 }}
 
-/* --- Menu --- */
 QMenu {{
     background-color: white;
     border: 1px solid {BORDER_COLOR_LIGHT};
-    padding: 3px; /* Reduced padding */
+    padding: 3px;
 }}
 QMenu::item {{
-    padding: 4px 15px; /* Adjusted padding */
+    padding: 4px 15px;
 }}
 QMenu::item:selected {{
     background-color: {SECONDARY_LIGHT};
@@ -282,44 +299,36 @@ QMenu::separator {{
     margin: 3px 5px;
 }}
 
-/* --- Tooltips --- */
 QToolTip {{
     color: {TEXT_COLOR_LIGHT};
-    background-color: #FFFFE0; /* Light yellow tooltip */
+    background-color: #FFFFE0;
     border: 1px solid {BORDER_COLOR_LIGHT};
     padding: 4px;
     border-radius: {BORDER_RADIUS};
 }}
 
-/* --- Message Box --- */
 QMessageBox {{
     background-color: {PRIMARY_LIGHT};
 }}
 QMessageBox QLabel {{
     color: {TEXT_COLOR_LIGHT};
 }}
-/* MessageBox buttons inherit general QPushButton style */
 
-/* --- Item Selection (for Icon Gallery, etc.) --- */
 QListView::item:selected, QTreeView::item:selected, QTableView::item:selected {{
     background-color: {SECONDARY_LIGHT};
     color: white;
 }}
-/* Style for selected item in a generic QListWidget/QListView */
 QListWidget::item:selected {{
     background-color: {SECONDARY_LIGHT};
     color: white;
-    /* Add a border or outline for more emphasis */
-    /* border: 1px solid #FFFFFF; */
 }}
 QListWidget::item:hover {{
-    background-color: #EAEAEA; /* Subtle hover */
+    background-color: #EAEAEA;
 }}
 
-/* Style for a potential Icon Button if used in gallery */
-QPushButton#IconButton:checked {{ /* If icons are checkable buttons */
+QPushButton#IconButton:checked {{
     background-color: {SECONDARY_LIGHT};
-    border: 2px solid white; /* Highlight border when checked */
+    border: 2px solid white;
 }}
 
 """
@@ -352,56 +361,59 @@ QScrollArea {{
 
 /* --- Preset Widget --- */
 PresetWidget {{
-    background-color: #343A40; /* Darker background for presets */
+    background-color: #343A40;
     border: 1px solid {BORDER_COLOR_DARK};
     border-radius: {BORDER_RADIUS};
     color: {TEXT_COLOR_DARK};
     padding: 5px;
+    /* Fixed size is set in Python code (setFixedSize) */
 }}
 
 PresetWidget:hover {{
-    background-color: #495057; /* Slightly lighter hover */
+    background-color: #495057;
 }}
 
 /* Title Label within PresetWidget */
 PresetWidget QLabel {{
     background-color: transparent;
     color: {TEXT_COLOR_DARK};
-    font-weight: bold;
 }}
+PresetWidget QLabel#icon_label {{
+    font-weight: normal;
+}}
+
 
 /* --- Buttons --- */
 QPushButton {{
     background-color: {SECONDARY_DARK};
-    color: {PRIMARY_DARK}; /* Dark text on lighter purple */
+    color: {PRIMARY_DARK};
     border: 1px solid {SECONDARY_DARK};
     padding: {BUTTON_PADDING_V} {BUTTON_PADDING_H};
     border-radius: {BORDER_RADIUS};
     font-size: {FONT_SIZE_BASE};
     min-height: {BUTTON_SIZE}px;
-    /* min-width: {BUTTON_SIZE}px; */
 }}
 
 QPushButton:hover {{
-    background-color: #B362CC; /* Lighter purple */
+    background-color: #B362CC;
     border-color: #B362CC;
 }}
 
 QPushButton:pressed {{
-    background-color: #C87FE0; /* Even lighter */
+    background-color: #C87FE0;
     border-color: #C87FE0;
 }}
 
 QPushButton:disabled {{
-    background-color: #5A3E63; /* Darker purple disabled */
+    background-color: #5A3E63;
     border-color: #5A3E63;
     color: #8A8A8A;
 }}
 
-QPushButton:checked {{ /* For toggle buttons */
-    background-color: #8A3DA6; /* Darker shade when checked */
+QPushButton:checked {{
+    background-color: #8A3DA6;
     border-color: #8A3DA6;
-    color: {TEXT_COLOR_DARK}; /* Light text when checked */
+    color: {TEXT_COLOR_DARK};
 }}
 QPushButton:checked:hover {{
     background-color: #7B3694;
@@ -412,41 +424,47 @@ QPushButton:checked:hover {{
 
 /* Add Button (+) */
 #AddButton {{
-    font-size: {FONT_SIZE_LARGE};
-    font-weight: bold;
-    background-color: {SECONDARY_DARK};
-    color: {PRIMARY_DARK};
-    border: none;
-    min-width: {ROUND_BUTTON_SIZE}px;
-    max-width: {ROUND_BUTTON_SIZE}px;
-    min-height: {ROUND_BUTTON_SIZE}px;
-    max-height: {ROUND_BUTTON_SIZE}px;
-    border-radius: {ROUND_BUTTON_SIZE // 2}px;
-    padding: 0px;
+    font-size: 24pt;
+    font-weight: lighter;
+    background-color: #343A40;
+    color: #888888;
+    border: 2px dashed {BORDER_COLOR_DARK};
+    padding: 10px;
+    border-radius: {BORDER_RADIUS};
+    /* Fixed size is set in Python code (setFixedSize) */
 }}
 #AddButton:hover {{
-    background-color: #B362CC;
+    background-color: #495057;
+    color: #AAAAAA;
+    border-color: #6c757d;
 }}
 
+/* --- Right Column Buttons in PresetWidget --- */
 /* Edit Button (✎) */
 #EditButton {{
     font-size: {FONT_SIZE_BASE};
-    min-width: {BUTTON_SIZE}px;
+    min-width: {ACTION_BUTTON_SIZE_PX}px;
+    max-width: {ACTION_BUTTON_SIZE_PX}px;
+    min-height: {ACTION_BUTTON_SIZE_PX}px;
+    max-height: {ACTION_BUTTON_SIZE_PX}px;
     padding: 0;
-    /* Optional: Adjust color for dark mode */
-    /* background-color: #6c757d; */
-    /* border-color: #6c757d; */
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: {TEXT_COLOR_DARK};
 }}
 #EditButton:hover {{
-    /* background-color: #5a6268; */
+    background-color: #5a6268;
 }}
 
 /* Delete Button (🗑) */
 #DeleteButton {{
     font-size: {FONT_SIZE_BASE};
-    min-width: {BUTTON_SIZE}px;
+    min-width: {ACTION_BUTTON_SIZE_PX}px;
+    max-width: {ACTION_BUTTON_SIZE_PX}px;
+    min-height: {ACTION_BUTTON_SIZE_PX}px;
+    max-height: {ACTION_BUTTON_SIZE_PX}px;
     padding: 0;
-    background-color: #dc3545; /* Keep red */
+    background-color: #dc3545;
     border-color: #dc3545;
     color: white;
 }}
@@ -455,21 +473,37 @@ QPushButton:checked:hover {{
     border-color: #c82333;
 }}
 
+/* --- Remove RunButton style --- */
+/* #RunButton {{ ... }} */
+
 /* On/Off Toggle Button (▶/⏸) */
 #OnOffToggleButton {{
     font-size: {FONT_SIZE_LARGE};
-    min-width: {BUTTON_SIZE}px;
+    min-width: {ACTION_BUTTON_SIZE_PX}px;
+    max-width: {ACTION_BUTTON_SIZE_PX}px;
+    min-height: {ACTION_BUTTON_SIZE_PX}px;
+    max-height: {ACTION_BUTTON_SIZE_PX}px;
     padding: 0;
 }}
-/* Checked state handled by general QPushButton:checked */
+
+/* Replay Button (▶/■ for recorded) */
+#ReplayButton {{
+    font-size: {FONT_SIZE_LARGE};
+    min-width: {ACTION_BUTTON_SIZE_PX}px;
+    max-width: {ACTION_BUTTON_SIZE_PX}px;
+    min-height: {ACTION_BUTTON_SIZE_PX}px;
+    max-height: {ACTION_BUTTON_SIZE_PX}px;
+    padding: 0;
+}}
 
 
-/* --- Input Fields --- */
+/* --- Input Fields, ComboBox, CheckBox, MenuBar, Menu, Tooltips, MessageBox, Item Selection --- */
+/* ... (These styles remain largely the same but adapted for dark mode) ... */
 QLineEdit, QTextEdit, QSpinBox {{
     border: 1px solid {BORDER_COLOR_DARK};
     padding: 5px;
     border-radius: {BORDER_RADIUS};
-    background-color: #495057; /* Darker input background */
+    background-color: #495057;
     color: {TEXT_COLOR_DARK};
     selection-background-color: {SECONDARY_DARK};
     selection-color: {PRIMARY_DARK};
@@ -480,7 +514,6 @@ QLineEdit:focus, QTextEdit:focus, QSpinBox:focus {{
     outline: none;
 }}
 
-/* --- ComboBox --- */
 QComboBox {{
     border: 1px solid {BORDER_COLOR_DARK};
     border-radius: {BORDER_RADIUS};
@@ -499,24 +532,22 @@ QComboBox::drop-down {{
     border-left-style: solid;
     border-top-right-radius: {BORDER_RADIUS};
     border-bottom-right-radius: {BORDER_RADIUS};
-    background-color: #5A6268; /* Slightly different dropdown bg */
+    background-color: #5A6268;
 }}
 
 QComboBox::down-arrow {{
-    /* Use a standard arrow or leave default */
      /* image: url(path/to/dark-down-arrow.png); */
 }}
 
-QComboBox QAbstractItemView {{ /* Style for the dropdown list */
+QComboBox QAbstractItemView {{
     border: 1px solid {BORDER_COLOR_DARK};
-    background-color: #343A40; /* Dark dropdown background */
+    background-color: #343A40;
     color: {TEXT_COLOR_DARK};
     selection-background-color: {SECONDARY_DARK};
     selection-color: {PRIMARY_DARK};
     outline: none;
 }}
 
-/* --- CheckBox --- */
 QCheckBox {{
     spacing: 5px;
 }}
@@ -535,7 +566,6 @@ QCheckBox::indicator:unchecked:hover {{
 QCheckBox::indicator:checked {{
     background-color: {SECONDARY_DARK};
     border: 1px solid {SECONDARY_DARK};
-    /* Add a checkmark image if desired */
     /* image: url(path/to/dark-check.png); */
 }}
 QCheckBox::indicator:checked:hover {{
@@ -543,7 +573,6 @@ QCheckBox::indicator:checked:hover {{
     border: 1px solid #B362CC;
 }}
 
-/* --- Menu Bar --- */
 QMenuBar {{
     background-color: #343A40;
     border-bottom: 1px solid {BORDER_COLOR_DARK};
@@ -561,7 +590,6 @@ QMenuBar::item:pressed {{
     color: {PRIMARY_DARK};
 }}
 
-/* --- Menu --- */
 QMenu {{
     background-color: #343A40;
     border: 1px solid {BORDER_COLOR_DARK};
@@ -581,25 +609,21 @@ QMenu::separator {{
     margin: 3px 5px;
 }}
 
-/* --- Tooltips --- */
 QToolTip {{
     color: {TEXT_COLOR_DARK};
-    background-color: #495057; /* Dark tooltip background */
+    background-color: #495057;
     border: 1px solid {BORDER_COLOR_DARK};
     padding: 4px;
     border-radius: {BORDER_RADIUS};
 }}
 
-/* --- Message Box --- */
 QMessageBox {{
     background-color: {PRIMARY_DARK};
 }}
 QMessageBox QLabel {{
     color: {TEXT_COLOR_DARK};
 }}
-/* MessageBox buttons inherit general QPushButton style */
 
-/* --- Item Selection (for Icon Gallery, etc.) --- */
 QListView::item:selected, QTreeView::item:selected, QTableView::item:selected {{
     background-color: {SECONDARY_DARK};
     color: {PRIMARY_DARK};
@@ -607,19 +631,17 @@ QListView::item:selected, QTreeView::item:selected, QTableView::item:selected {{
 QListWidget::item:selected {{
     background-color: {SECONDARY_DARK};
     color: {PRIMARY_DARK};
-    /* border: 1px solid #FFFFFF; */ /* Optional border */
 }}
 QListWidget::item:hover {{
     background-color: #495057;
 }}
 
-/* Style for a potential Icon Button if used in gallery */
 QPushButton#IconButton:checked {{
     background-color: {SECONDARY_DARK};
-    border: 2px solid {TEXT_COLOR_DARK}; /* Light border when checked */
+    border: 2px solid {TEXT_COLOR_DARK};
 }}
 
 """
 
 # Default stylesheet (can be changed later)
-STYLESHEET = STYLESHEET_LIGHT
+STYLESHEET = STYLESHEET_LIGHT # Or STYLESHEET_DARK
