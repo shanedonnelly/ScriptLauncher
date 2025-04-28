@@ -7,7 +7,7 @@ set -e
 APP_NAME_PKG="scriptlauncher" # Lowercase package name
 APP_NAME_EXEC="ScriptLauncher" # Capitalized executable name (from PyInstaller --name)
 VERSION="1.0"
-ARCH="x86_64" # Adjust if building for a different architecture
+ARCH="amd64" # Adjust if building for a different architecture
 MAINTAINER="Shane Donnelly shaneboss34@gmail.com" # !!! CHANGE THIS !!!
 EMAIL="shaneboss34@gmail.com" # !!! CHANGE THIS !!!
 DESCRIPTION="A simple application to launch scripts and macros."
@@ -72,7 +72,7 @@ Version: ${VERSION}
 Architecture: ${ARCH}
 Maintainer: ${MAINTAINER}
 Description: ${DESCRIPTION}
-Depends: libc6 # Add other core dependencies if known
+Depends: libc6
 EOF
 
 # 7. Create .desktop file
