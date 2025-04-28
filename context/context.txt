@@ -1,0 +1,67 @@
+ScriptLauncher est une application déjà fonctionnelle grâce à tkinter. 
+Certaines fonctions ne fonctionne pas correctement. 
+Voici les documents existants :
+.
+├── assets
+│   └── app_icons
+│       ├── 001-social.png
+│       ├── 002-terminal.png
+|       ...
+├── build
+│   ├── assets
+│   │   └── app_icons
+│   ├── icon.png
+│   └── ScriptLauncher
+├── build.sh
+├── context.txt
+├── dev-resize-image.py
+├── events.json
+├── icon.png
+├── presets
+│   ├── preset1.slaunch
+│   ├── preset2.slaunch
+│   └── preset3.slaunch
+├── __pycache__
+│   └── recording_module.cpython-312.pyc
+├── recording_module.py
+├── record_play.py
+├── records (folder)
+├── requirements.txt
+├── ScriptLauncher.py
+
+└── venv
+    ├── bin
+    │   ├── activate
+    │   ├── activate.csh
+    |   ....
+
+Le fichier principal est ScriptLauncher.py. Il utilise aussi le recording_module que tu peux améliorer aussi.
+
+Toutes les fonctionnalitées peuvent etre étudier dans le fichier principal.
+
+Je veux que tu passes cette application sur Qt pour python (ou PyQt) dans un sous dossier.
+Je veux que l'application soit bien commenté pour les fonctions importantes et fragmenté avec une petite architecture et en plusieurs fichier pour que chaque fichier ne soit pas trop long. 
+
+Voici les fonctionnalités : 
+la fonction principal et la création, la modification et la destruction de bouton personalisé dans une grille (idéalement de 5 colonnes et pas de limite de ligne).
+Cette grille est scrollable. (on voit donc quelques lignes (<10) à la fois).
+Fais un thème moderne.
+la création de bouton se fait via un formulaire, on choisi un titre, un mode, on peut choisir une icon (non obligatoire ) qui se mettra dans le coin haut gauche du bouton.
+selon le mode, on aura d'autres champ.
+le mode standard : 
+on a un champ d'ecriture de text (le script). et c'est tout.
+Quand on cliquera sur le bouton entier, le script se lance dans un autre terminal. si possible on différencie le lancement selon si c'est mac, windows (powershell) on linux (gnome-terminal (comme présent actuellement)).
+Le mode on/off : 
+On a 2 champs, un script de lancement, et un d'arret. 
+On ne pourra donc pas cliquer sur le bouton tout entier mais plutot un sous bouton avec un icon pause play qui lancera le script off ou on.
+On peut modifier dans le form à la création ou l'edit l'etat actuelle souhaité.
+Enfin, le mode playable : 
+Pour celui ci on peut enregistrer des actions grâce à un bouton d'enregistrement. Il faut qu'on comprenne qu'on enregistre actuellement. puis couper. les quelques dernières et premères actions sont  coupés car inutile.
+On aura aussi un sous mode à choisir, soit on choisi le nombre de replay (par défaut 1), soit on le met de manière infini. 
+Comme le principal est déjà fait dans l'app, tu verras qu'il y a des fichiers de preset .slaunch qui permettent de sauvegarder un bouton (preset). je veux donc un mini menu déroulant fichier / exporter ou importer, ou on peut exporter un preset vers l'exterieur de l'app. (par exemple pour l'envoyer à un ami) ou bien en importer un. 
+
+Tout est déjà dans le fichier ScriptLauncher donc inspire toi en beaucoup. 
+
+Refait aussi un nouveau fichier de build (pour l'instant si c'est que linux c'est pas un problème.)
+rempli aussi readme.txt
+
