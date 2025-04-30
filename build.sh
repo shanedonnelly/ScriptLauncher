@@ -47,7 +47,7 @@ pyinstaller --noconfirm \
     --name "${APP_NAME_EXEC}" \
     --icon="${ICON_FILE}" \
     --add-data="assets:assets" \
-    --add-data="presets:presets" \
+    --add-data="presets:presets_default" \
     "${ENTRY_POINT}"
 
 # Verify PyInstaller output
