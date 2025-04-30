@@ -102,3 +102,11 @@ The `build.sh` script automates the process of creating a standalone executable 
 ```bash
 cd qt_app
 ./build.sh
+```
+## Roadmap / Future Ideas
+
+*   **Theme Persistence:** Save the selected theme (Light/Dark) so it persists.
+*   **Improved Replay Interruption:** Allow stopping a recorded macro replay by just doing an action.
+*   **Dynamic Grid Layout:** Make the preset grid automatically adjust the number of columns based on the window size.
+*   **Grid Preferences:** Add settings to allow users to customize the grid layout.
+*   **Expanded Icon Library:** Include a much larger selection of built-in icons for presets.
