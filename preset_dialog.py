@@ -90,7 +90,25 @@ class PresetDialog(QDialog):
         self.standard_widget = QWidget()
         standard_layout = QVBoxLayout(self.standard_widget)
         standard_layout.addWidget(QLabel("Script Content:"))
-        self.script_edit = QTextEdit(self.preset_data.get('script', ''))
+        # Fonction auxiliaire pour normaliser les sauts de ligne
+        def normalize_newlines(text):
+            if not text:
+                return ''
+            # Force tous les sauts de ligne à être \n (LF)
+            normalized = text.replace('\r\n', '\n').replace('\r', '\n')
+            return normalized
+        
+        # Initialisation des QTextEdit avec texte normalisé
+        self.script_edit = QTextEdit()
+        self.script_edit.setPlainText(normalize_newlines(self.preset_data.get('script', '')))
+        
+        # Idem pour les autres champs
+        self.script_on_edit = QTextEdit()
+        self.script_on_edit.setPlainText(normalize_newlines(self.preset_data.get('script_on', '')))
+        
+        self.script_off_edit = QTextEdit()
+        self.script_off_edit.setPlainText(normalize_newlines(self.preset_data.get('script_off', '')))
+        
         standard_layout.addWidget(self.script_edit)
         self.standard_widget.setVisible(False)
         self.stacked_layout.addWidget(self.standard_widget)
@@ -102,10 +120,8 @@ class PresetDialog(QDialog):
         self.initial_state_check.setChecked(self.preset_data.get('on_off_state', False))
         on_off_layout.addWidget(self.initial_state_check)
         on_off_layout.addWidget(QLabel("Script ON:"))
-        self.script_on_edit = QTextEdit(self.preset_data.get('script_on', ''))
         on_off_layout.addWidget(self.script_on_edit)
         on_off_layout.addWidget(QLabel("Script OFF:"))
-        self.script_off_edit = QTextEdit(self.preset_data.get('script_off', ''))
         on_off_layout.addWidget(self.script_off_edit)
         self.on_off_widget.setVisible(False)
         self.stacked_layout.addWidget(self.on_off_widget)
