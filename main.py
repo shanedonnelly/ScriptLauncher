@@ -36,8 +36,8 @@ PRESET_WIDGET_WIDTH = 200 # Adjust as needed for 16 chars + icon + buttons
 PRESET_WIDGET_HEIGHT = 80  # Adjust as needed for 2 lines + icon
 ICON_SIZE = 24
 ACTION_BUTTON_SIZE = 25 # Size for buttons on the right
-TITLE_LINE_LENGTH = 16
-TITLE_MAX_CHARS = 32
+TITLE_LINE_LENGTH = 24
+TITLE_MAX_CHARS = 48
 
 class PresetWidget(QFrame):
     """ Custom widget representing a single preset button in the grid. """
