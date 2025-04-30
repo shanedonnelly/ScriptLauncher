@@ -6,7 +6,7 @@ set -e
 # --- Configuration ---
 APP_NAME_PKG="scriptlauncher" # Lowercase package name
 APP_NAME_EXEC="ScriptLauncher" # Capitalized executable name (from PyInstaller --name)
-VERSION="1.0.0-beta" # <-- UPDATE THIS VERSION FOR A NEW RELEASE
+VERSION="1.1.0-beta" # <-- UPDATE THIS VERSION FOR A NEW RELEASE
 ARCH="amd64" # Adjust if building for a different architecture
 MAINTAINER="Shane Donnelly shaneboss34@gmail.com"
 EMAIL="shaneboss34@gmail.com"
