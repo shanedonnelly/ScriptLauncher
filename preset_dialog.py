@@ -24,7 +24,7 @@ except ImportError:
 
 
 # --- Change MAX_TITLE_LENGTH ---
-MAX_TITLE_LENGTH = 32 # Strict 32 character limit (2 lines of 16)
+MAX_TITLE_LENGTH = 48 # Strict 32 character limit (2 lines of 16)
 
 class PresetDialog(QDialog):
     preset_saved = pyqtSignal(dict)
