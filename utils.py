@@ -283,141 +283,155 @@ def run_script(script_content):
         return
 
     os_platform = platform.system()
-    # Use system temp dir for the temporary script for better practice
-    # temp_script_path = os.path.join(PRESETS_FOLDER, f"temp_script_{os.getpid()}.sh") # Old way
     import tempfile
-    try:
-        # Create a temporary file with .sh extension (or .bat/.ps1 on Windows)
-        suffix = ".bat" if os_platform == "Windows" else ".sh"
-        with tempfile.NamedTemporaryFile(mode='w', suffix=suffix, delete=False, encoding='utf-8') as f:
-            temp_script_path = f.name # Get the path
-            # Add shebang for Linux/macOS if not present
-            if os_platform in ["Linux", "Darwin"] and not script_content.startswith("#!"):
-                 f.write("#!/bin/bash\n")
-            f.write(script_content)
-        print(f"Temporary script created at: {temp_script_path}") # Debugging
 
-        # Make executable on Linux/macOS
+    temp_script_path = None # Initialize to ensure it's always defined for finally
+
+    def _prepare_subprocess_environment(platform_system, current_env):
+        """Prepares a modified environment for the subprocess, especially the PATH."""
+        env = current_env.copy()
+        original_path = env.get("PATH", "")
+        paths_to_prepend = []
+
+        # Common user-specific bin directory
+        local_bin = os.path.expanduser("~/.local/bin")
+        if os.path.isdir(local_bin):
+            paths_to_prepend.append(local_bin)
+
+        if platform_system == "Linux":
+            linuxbrew_paths = [
+                os.path.expanduser("~/.linuxbrew/bin"),
+                "/home/linuxbrew/.linuxbrew/bin",
+            ]
+            for p in linuxbrew_paths:
+                if os.path.isdir(p):
+                    paths_to_prepend.append(p)
+        elif platform_system == "Darwin": # macOS
+            mac_brew_paths = [
+                "/opt/homebrew/bin",    # Apple Silicon & default for new Intel
+                "/usr/local/bin",       # Older Homebrew, also general custom installs
+            ]
+            for p in mac_brew_paths:
+                if os.path.isdir(p): # /usr/local/bin should exist, but check anyway
+                    paths_to_prepend.append(p)
+        
+        # Add other common paths for package managers if needed here
+        # e.g., for sdkman, nvm (though nvm is often handled by .bashrc/.profile sourcing)
+
+        # Filter out duplicates and paths already in original_path
+        unique_new_paths = []
+        existing_path_parts = set(original_path.split(os.pathsep))
+        for p in paths_to_prepend:
+            if p not in existing_path_parts and p not in unique_new_paths:
+                unique_new_paths.append(p)
+
+        if unique_new_paths:
+            new_path_str = os.pathsep.join(unique_new_paths)
+            env["PATH"] = new_path_str + os.pathsep + original_path
+            print(f"Modified PATH for subprocess: {env['PATH']}")
+        else:
+            print(f"PATH for subprocess not significantly modified, using: {original_path}")
+            
+        return env
+
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', suffix=".sh" if os_platform != "Windows" else ".bat", delete=False, encoding='utf-8') as f:
+            temp_script_path = f.name
+            if os_platform in ["Linux", "Darwin"] and not script_content.startswith("#!"):
+                f.write("#!/bin/bash\n")
+            f.write(script_content)
+        print(f"Temporary script created at: {temp_script_path}")
+
         if os_platform in ["Linux", "Darwin"]:
             try:
-                os.chmod(temp_script_path, 0o755) # rwxr-xr-x
+                os.chmod(temp_script_path, 0o755)
             except OSError as e:
                 print(f"Warning: Could not chmod temp script {temp_script_path}: {e}")
-                # Proceed anyway, the terminal might still execute it
 
-        # --- Execute in a new terminal ---
+        sub_env = _prepare_subprocess_environment(os_platform, os.environ)
         cmd_list = []
-        # Command to run inside the terminal.
-        # Use 'bash -l -c "..."' to ensure a login shell, which sources profile files (e.g., ~/.profile)
-        # This should set up the PATH correctly to find user-installed executables.
-        # The temp_script_path is quoted to handle spaces or special characters in the path.
-        # 'exec bash' keeps the terminal open after the script finishes.
-        script_execution_command = f'cd ~ ; "{temp_script_path}" ; exec bash'
+
+        # Command to be executed by bash -l -c "..."
+        # This sources user profiles and then runs the temp script.
+        script_runner_command = (
+            f'if [ -f "$HOME/.profile" ]; then . "$HOME/.profile"; fi; '
+            f'if [ -f "$HOME/.bashrc" ]; then . "$HOME/.bashrc"; fi; '
+            f'cd "$HOME"; "{temp_script_path}"; exec bash'
+        )
 
         if os_platform == "Linux":
             terminals = {
-                # gnome-terminal: pass command directly to bash -l -c
-                "gnome-terminal": {
-                    "base_args": ["gnome-terminal", "--", "bash", "-l", "-c"],
-                    "format": "append_direct"
-                },
-                # konsole, lxterminal, xterm: use -e "bash -l -c \"escaped_command\""
-                "konsole": {
-                    "base_args": ["konsole", "-e"],
-                    "format": "bash_l_c_double_quoted_string"
-                },
-                # xfce4-terminal: use --command="bash -l -c 'escaped_command'"
-                "xfce4-terminal": {
-                    "base_args": ["xfce4-terminal", "--command="], # Note: No space after --command=
-                    "format": "bash_l_c_single_quoted_string"
-                },
-                "lxterminal": {
-                    "base_args": ["lxterminal", "-e"],
-                    "format": "bash_l_c_double_quoted_string"
-                },
-                "xterm": {
-                    "base_args": ["xterm", "-e"],
-                    "format": "bash_l_c_double_quoted_string"
-                }
+                "gnome-terminal": ["gnome-terminal", "--", "bash", "-l", "-c"],
+                "konsole": ["konsole", "-e"],
+                "xfce4-terminal": ["xfce4-terminal", "--command="],
+                "lxterminal": ["lxterminal", "-e"],
+                "xterm": ["xterm", "-e"],
             }
-            found_terminal = False
-            for term, config in terminals.items():
-                if shutil.which(term): # Use shutil.which to find executable
-                    cmd_list = list(config["base_args"]) # Create a copy
-
-                    if config["format"] == "append_direct":
-                        # For: gnome-terminal -- bash -l -c "script_execution_command"
-                        cmd_list.append(script_execution_command)
-                    elif config["format"] == "bash_l_c_single_quoted_string":
-                        # For: xfce4-terminal --command='bash -l -c '\''script_execution_command_with_escaped_single_quotes'\'''
-                        # The base_args for xfce4-terminal is ["xfce4-terminal", "--command="]
-                        # We need to append the full bash command string to the list.
-                        # The argument to --command= should be a single string.
-                        cmd_list.append(f'bash -l -c \'{script_execution_command.replace("'", "'\\''")}\'')
-                    elif config["format"] == "bash_l_c_double_quoted_string":
-                        # For: konsole -e "bash -l -c \"script_execution_command_with_escaped_double_quotes\""
-                        cmd_list.append(f'bash -l -c "{script_execution_command.replace("\"", "\\\"")}"')
-                    
-                    found_terminal = True
-                    print(f"Using terminal: {term} with args: {cmd_list}") # Debugging
+            found_term_executable = None
+            for term_exec, base_args_list in terminals.items():
+                if shutil.which(term_exec):
+                    found_term_executable = term_exec
+                    cmd_list = list(base_args_list)
+                    if term_exec == "gnome-terminal":
+                        cmd_list.append(script_runner_command)
+                    elif term_exec == "xfce4-terminal": # Needs single quotes for its --command
+                        cmd_list.append(f'bash -l -c \'{script_runner_command.replace("'", "'\\''")}\'')
+                    else: # konsole, lxterminal, xterm typically use -e "bash -l -c \"...\""
+                        cmd_list.append(f'bash -l -c "{script_runner_command.replace("\"", "\\\"")}"')
                     break
-            if not found_terminal:
-                 QMessageBox.warning(None, "Terminal Error", "Could not find a supported terminal (gnome-terminal, konsole, xfce4-terminal, lxterminal, xterm). Please install one.")
-                 return # Don't proceed if no terminal found
+            
+            if not found_term_executable:
+                QMessageBox.warning(None, "Terminal Error", "Could not find a supported Linux terminal.")
+                return
+            print(f"Using terminal: {found_term_executable} with args: {cmd_list}")
 
         elif os_platform == "Darwin": # macOS
-            # Using osascript to run the script file directly in a new Terminal window
+            # AppleScript to run the command in a new Terminal window
+            # The script_runner_command (which sources .profile/.bashrc) is used here too.
+            escaped_runner_cmd = script_runner_command.replace('"', '\\"')
             osascript_cmd = f'''
             tell application "Terminal"
                 activate
-                do script "cd ~ ; \\"{temp_script_path}\\"; exit"
+                do script "{escaped_runner_cmd}"
             end tell
             '''
             cmd_list = ['osascript', '-e', osascript_cmd]
 
         elif os_platform == "Windows":
-            # Use start command to open a new PowerShell window and execute the script
-            # PowerShell needs the full path, properly quoted.
-            # -NoExit keeps the window open after script finishes.
-            # Ensure temp_script_path uses backslashes if needed, though Python often handles it
             win_path = temp_script_path.replace('/', '\\')
-            # Using Start-Process is generally more robust
+            # Using PowerShell to start a new PowerShell window that runs the script and stays open
             cmd_list = ['powershell', '-Command', f"Start-Process powershell -ArgumentList '-NoExit -File \"{win_path}\"'"]
-
+            # Alternative for cmd.exe:
+            # cmd_list = ['cmd.exe', '/c', f'start cmd.exe /k "{win_path}"']
         else:
             QMessageBox.warning(None, "OS Error", f"Unsupported operating system: {os_platform}")
             return
 
-        # --- Run the command ---
         if cmd_list:
-            print(f"Running command: {' '.join(cmd_list)}")
-            try:
-                # Use Popen for non-blocking execution
-                subprocess.Popen(cmd_list)
-            except FileNotFoundError:
-                 QMessageBox.critical(None, "Execution Error", f"Could not execute terminal command: {' '.join(cmd_list)}\nEnsure the terminal application is installed and in your PATH.")
-            except Exception as e:
-                 QMessageBox.critical(None, "Execution Error", f"Error launching terminal: {e}")
+            print(f"Running command: {' '.join(cmd_list if isinstance(cmd_list, list) else [str(cmd_list)])}") # Ensure joinable
+            print(f"Using PATH for Popen: {sub_env.get('PATH')}")
+            subprocess.Popen(cmd_list, env=sub_env)
+        else:
+            # This case should ideally be caught by earlier checks (no terminal found, unsupported OS)
+            print("Command list is empty, cannot run script.")
+
 
     except Exception as e:
         error_message = f"Could not prepare or run script:\n{e}"
         print(f"Error running script: {error_message}")
         QMessageBox.critical(None, "Script Error", error_message)
     finally:
-        # Clean up the temporary script file using the path stored before potential errors
-        if 'temp_script_path' in locals() and os.path.exists(temp_script_path):
-            # Use threading to avoid blocking and handle potential errors
-            def cleanup_temp_file(path):
-                time.sleep(3) # Wait a bit longer
+        if temp_script_path and os.path.exists(temp_script_path):
+            # Threaded cleanup to avoid blocking and handle potential file locks
+            path_to_clean = temp_script_path 
+            def cleanup_task(path):
+                time.sleep(3) # Give the terminal/script a moment
                 try:
                     if os.path.exists(path):
                         os.remove(path)
                         print(f"Cleaned up temp file: {path}")
-                except Exception as e:
-                    print(f"Warning: Could not remove temporary script file {path}: {e}")
-
-            cleanup_thread = threading.Thread(target=cleanup_temp_file, args=(temp_script_path,), daemon=True)
-            cleanup_thread.start()
-
-
+                except Exception as e_clean:
+                    print(f"Warning: Could not remove temp script {path}: {e_clean}")
+            
+            threading.Thread(target=cleanup_task, args=(path_to_clean,), daemon=True).start()
 
