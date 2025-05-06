@@ -307,33 +307,57 @@ def run_script(script_content):
 
         # --- Execute in a new terminal ---
         cmd_list = []
-        # Command to run inside the terminal. Ensure path is quoted.
-        # Use 'exec bash' or similar to keep terminal open only if script needs interaction or output viewing.
-        # If the script runs and exits, maybe don't keep terminal open? Let's keep it for now.
-        # Change directory to user's home first? Optional.
-        shell_cmd = f"cd ~ && \"{temp_script_path}\"; exec bash" # Example keeping terminal open
+        # Command to run inside the terminal.
+        # Use 'bash -l -c "..."' to ensure a login shell, which sources profile files (e.g., ~/.profile)
+        # This should set up the PATH correctly to find user-installed executables.
+        # The temp_script_path is quoted to handle spaces or special characters in the path.
+        # 'exec bash' keeps the terminal open after the script finishes.
+        script_execution_command = f'cd ~ ; "{temp_script_path}" ; exec bash'
 
         if os_platform == "Linux":
             terminals = {
-                "gnome-terminal": ["gnome-terminal", "--", "bash", "-c"],
-                "konsole": ["konsole", "-e", "bash", "-c"],
-                "xfce4-terminal": ["xfce4-terminal", "--command="],
-                "lxterminal": ["lxterminal", "-e"],
-                "xterm": ["xterm", "-e"]
+                # gnome-terminal: pass command directly to bash -l -c
+                "gnome-terminal": {
+                    "base_args": ["gnome-terminal", "--", "bash", "-l", "-c"],
+                    "format": "append_direct"
+                },
+                # konsole, lxterminal, xterm: use -e "bash -l -c \"escaped_command\""
+                "konsole": {
+                    "base_args": ["konsole", "-e"],
+                    "format": "bash_l_c_double_quoted_string"
+                },
+                # xfce4-terminal: use --command="bash -l -c 'escaped_command'"
+                "xfce4-terminal": {
+                    "base_args": ["xfce4-terminal", "--command="], # Note: No space after --command=
+                    "format": "bash_l_c_single_quoted_string"
+                },
+                "lxterminal": {
+                    "base_args": ["lxterminal", "-e"],
+                    "format": "bash_l_c_double_quoted_string"
+                },
+                "xterm": {
+                    "base_args": ["xterm", "-e"],
+                    "format": "bash_l_c_double_quoted_string"
+                }
             }
             found_terminal = False
-            for term, args in terminals.items():
+            for term, config in terminals.items():
                 if shutil.which(term): # Use shutil.which to find executable
-                    cmd_list = list(args) # Create a copy
-                    # Adjust command based on terminal type
-                    if term in ["xfce4-terminal"]:
-                         # Needs careful quoting for the command string
-                         cmd_list.append(f'bash -c \'{shell_cmd.replace("'", "'\\''")}\'')
-                    elif term in ["lxterminal", "xterm", "konsole"]:
-                         # These often take the command directly after -e
-                         cmd_list.append(f'bash -c "{shell_cmd.replace("\"", "\\\"")}"')
-                    else: # gnome-terminal
-                         cmd_list.append(shell_cmd)
+                    cmd_list = list(config["base_args"]) # Create a copy
+
+                    if config["format"] == "append_direct":
+                        # For: gnome-terminal -- bash -l -c "script_execution_command"
+                        cmd_list.append(script_execution_command)
+                    elif config["format"] == "bash_l_c_single_quoted_string":
+                        # For: xfce4-terminal --command='bash -l -c '\''script_execution_command_with_escaped_single_quotes'\'''
+                        # The base_args for xfce4-terminal is ["xfce4-terminal", "--command="]
+                        # We need to append the full bash command string to the list.
+                        # The argument to --command= should be a single string.
+                        cmd_list.append(f'bash -l -c \'{script_execution_command.replace("'", "'\\''")}\'')
+                    elif config["format"] == "bash_l_c_double_quoted_string":
+                        # For: konsole -e "bash -l -c \"script_execution_command_with_escaped_double_quotes\""
+                        cmd_list.append(f'bash -l -c "{script_execution_command.replace("\"", "\\\"")}"')
+                    
                     found_terminal = True
                     print(f"Using terminal: {term} with args: {cmd_list}") # Debugging
                     break
