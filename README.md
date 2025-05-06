@@ -110,3 +110,4 @@ cd qt_app
 *   **Dynamic Grid Layout:** Make the preset grid automatically adjust the number of columns based on the window size.
 *   **Grid Preferences:** Add settings to allow users to customize the grid layout.
 *   **Expanded Icon Library:** Include a much larger selection of built-in icons for presets.
+*    **others** : choose to close or not the terminal after script, ...
